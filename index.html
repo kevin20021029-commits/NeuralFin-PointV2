@@ -1,0 +1,2594 @@
+<!DOCTYPE html><html lang="zh-HK"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NeuralFin · 完整互動版</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "PingFang TC", "Microsoft YaHei", sans-serif; background: #000; color: #fff; position: fixed; width: 100%; height: 100%; }
+  .app { max-width: 430px; margin: 0 auto; height: 100vh; background: #000; position: relative; overflow: hidden; }
+  .page { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94); -webkit-overflow-scrolling: touch; scrollbar-width: none; background: #000; }
+  .page::-webkit-scrollbar { display: none; }
+  .tab-page { z-index: 1; display: none; }
+  .tab-page.active { display: block; }
+  .stack-page { z-index: 10; transform: translateX(100%); pointer-events: none; box-shadow: -5px 0 20px rgba(0,0,0,0.5); background: #0a0a0a; }
+  .stack-page.show { transform: translateX(0); pointer-events: auto; }
+  .stack-page.behind { transform: translateX(-25%); opacity: 0.4; }
+  .gold-text { background: linear-gradient(135deg, #F8DC7A 0%, #D4AF37 50%, #A8802A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .status-bar { padding: 14px 22px 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; background: #000; }
+  .status-icons { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+  .page-header { position: sticky; top: 0; z-index: 20; background: rgba(0,0,0,0.92); backdrop-filter: blur(20px); padding: 10px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .back-btn { width: 32px; height: 32px; background: rgba(255,255,255,0.08); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; line-height: 1; transition: all 0.15s; }
+  .back-btn:active { transform: scale(0.92); background: rgba(212,175,55,0.2); }
+  .header-title { flex: 1; font-size: 16px; font-weight: 700; }
+  .header-crumb { font-size: 11px; color: #666; margin-top: 2px; }
+  .header-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.06); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; transition: all 0.15s; }
+  .header-icon:active { transform: scale(0.92); }
+  .header-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #000; }
+  .clickable { cursor: pointer; transition: all 0.15s; }
+  .clickable:active { transform: scale(0.97); opacity: 0.85; }
+
+  /* 首页 */
+  .home-header { padding: 4px 16px 10px; display: flex; align-items: center; gap: 14px; }
+  .home-logo { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); border: 1.5px solid #D4AF37; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #D4AF37; font-size: 16px; position: relative; cursor: pointer; }
+  .home-logo::after { content: ''; position: absolute; top: 1px; right: 1px; width: 8px; height: 8px; background: #22c55e; border: 2px solid #000; border-radius: 50%; }
+  .home-tabs { display: flex; gap: 20px; flex: 1; font-size: 15px; }
+  .home-tab { color: #888; position: relative; padding: 4px 0; cursor: pointer; }
+  .home-tab.active { color: #fff; font-weight: 700; }
+  .home-tab.active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 18px; height: 3px; background: #22c55e; border-radius: 2px; }
+  .home-search { width: 36px; height: 36px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
+
+  .activity-banner { margin: 4px 12px 10px; padding: 14px; border-radius: 14px; background: linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(30,20,5,0.9) 60%, rgba(10,10,10,0.9) 100%); border: 1px solid rgba(212,175,55,0.45); position: relative; overflow: hidden; cursor: pointer; }
+  @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .activity-banner::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%); animation: shimmer 2.8s infinite; }
+  .banner-content { position: relative; display: flex; align-items: center; gap: 12px; }
+  .banner-icon { width: 42px; height: 42px; background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.4); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .banner-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: #F8DC7A; background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.3); padding: 1px 6px; border-radius: 4px; margin-bottom: 3px; }
+  .banner-title { font-size: 14px; font-weight: 800; line-height: 1.3; margin-bottom: 3px; }
+  .banner-sub { font-size: 10px; color: rgba(255,255,255,0.6); }
+  .banner-cta { padding: 7px 13px; background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; border-radius: 16px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+
+  .categories { display: flex; gap: 8px; padding: 4px 16px 12px; overflow-x: auto; scrollbar-width: none; }
+  .categories::-webkit-scrollbar { display: none; }
+  .cat { padding: 7px 15px; background: rgba(255,255,255,0.06); border-radius: 20px; font-size: 13px; color: #aaa; white-space: nowrap; cursor: pointer; transition: all 0.15s; }
+  .cat.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 600; }
+  .cat:active { transform: scale(0.95); }
+
+  .feed { padding: 0 8px 180px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { background: #1a1a1a; border-radius: 12px; overflow: hidden; cursor: pointer; transition: all 0.15s; }
+  .card:active { transform: scale(0.97); }
+  .card-img { width: 100%; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; font-size: 38px; position: relative; }
+  .card-img::after { content: '▶'; position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; background: rgba(0,0,0,0.4); border-radius: 50%; font-size: 8px; display: flex; align-items: center; justify-content: center; }
+  .card-title { padding: 8px 10px 4px; font-size: 12.5px; line-height: 1.4; color: #e5e5e5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 38px; }
+  .card-footer { padding: 4px 10px 10px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: #888; }
+  .card-author { display: flex; align-items: center; gap: 4px; }
+  .card-avatar { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, #444, #666); font-size: 9px; display: flex; align-items: center; justify-content: center; }
+  .card-like { cursor: pointer; }
+
+  .feed-empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; color: #555; font-size: 13px; }
+
+  .floating-stack { position: fixed; right: 14px; bottom: 110px; z-index: 50; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @keyframes pulse-gold { 0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.5), 0 4px 20px rgba(212,175,55,0.4); } 50% { box-shadow: 0 0 0 12px rgba(212,175,55,0), 0 4px 20px rgba(212,175,55,0.4); } }
+  .task-ball { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #F8DC7A, #D4AF37, #A8802A); display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; cursor: pointer; animation: bounce-subtle 2s ease-in-out infinite, pulse-gold 2.5s infinite; }
+  .task-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; background: #ef4444; border-radius: 10px; font-size: 11px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 5px; border: 2px solid #000; }
+  .ai-ball { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #60a5fa, #a78bfa); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 4px 20px rgba(96,165,250,0.4); cursor: pointer; }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: rgba(0,0,0,0.92); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 0 24px; display: flex; justify-content: space-around; align-items: center; z-index: 40; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: #666; cursor: pointer; width: 56px; }
+  .nav-item.active { color: #fff; }
+  .nav-icon { font-size: 20px; line-height: 1; }
+  .nav-plus { width: 48px; height: 48px; background: #22c55e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 300; color: #fff; margin-top: -20px; box-shadow: 0 4px 16px rgba(34,197,94,0.45); cursor: pointer; }
+
+  /* 个人中心 */
+  .profile-hero { padding: 20px 16px 16px; background: linear-gradient(180deg, #1a1410 0%, #0a0a0a 100%); }
+  .profile-head { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .profile-avatar { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #D4AF37, #8B6914); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #000; border: 2px solid rgba(212,175,55,0.5); }
+  .profile-name { font-size: 18px; font-weight: 800; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .profile-id { font-size: 11px; color: #888; margin-bottom: 5px; }
+  .profile-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .profile-tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); cursor: pointer; }
+
+  .three-account-card { margin: 14px 16px 16px; padding: 16px; border-radius: 18px; background: radial-gradient(circle at 90% 20%, rgba(212,175,55,0.35) 0%, transparent 55%), radial-gradient(circle at 0% 100%, rgba(168,128,42,0.25) 0%, transparent 55%), linear-gradient(135deg, #2a1f0a 0%, #1a1410 50%, #0f0a05 100%); border: 1px solid rgba(212,175,55,0.4); position: relative; overflow: hidden; cursor: pointer; }
+  .tac-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .tac-label { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .tac-more { font-size: 11px; color: #F8DC7A; }
+  .tac-accounts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .tac-acc { padding: 10px 8px; background: rgba(0,0,0,0.35); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
+  .tac-acc-title { font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 4px; }
+  .tac-acc-num { font-size: 18px; font-weight: 900; line-height: 1; }
+  .tac-acc-tag { font-size: 8px; margin-top: 4px; padding: 1px 4px; border-radius: 3px; display: inline-block; }
+  .tac-acc-tag.perm { background: rgba(96,165,250,0.15); color: #93c5fd; }
+  .tac-acc-tag.week { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .tac-acc-tag.month { background: rgba(251,146,60,0.15); color: #fdba74; }
+  .tac-rules { margin-top: 10px; padding: 8px 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 10px; color: #aaa; line-height: 1.6; }
+  .tac-rules b { color: #F8DC7A; }
+
+  .quick-row { margin: 0 16px 16px; padding: 14px; background: #141414; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .quick-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px; cursor: pointer; position: relative; }
+  .quick-icon { font-size: 24px; }
+  .quick-label { font-size: 10px; color: #ccc; }
+  .quick-badge { position: absolute; top: -2px; right: 8px; background: #ef4444; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; border: 1.5px solid #141414; }
+
+  .asset-card { margin: 0 16px 16px; padding: 14px; background: linear-gradient(135deg, rgba(96,165,250,0.1), rgba(20,20,20,1)); border: 1px solid rgba(96,165,250,0.2); border-radius: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .asset-icon { width: 40px; height: 40px; background: rgba(96,165,250,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .asset-body { flex: 1; }
+  .asset-title { font-size: 13px; font-weight: 700; }
+  .asset-num { font-size: 18px; font-weight: 900; color: #60a5fa; margin-top: 2px; }
+  .asset-sub { font-size: 11px; color: #888; margin-top: 2px; }
+
+  .list-group { margin: 0 16px 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden; }
+  .list-item { padding: 14px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+  .list-item:active { background: rgba(255,255,255,0.04); }
+  .list-item:last-child { border-bottom: none; }
+  .list-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .list-text { flex: 1; }
+  .list-title { font-size: 14px; font-weight: 600; }
+  .list-desc { font-size: 11px; color: #888; margin-top: 2px; }
+  .list-extra { font-size: 12px; color: #F8DC7A; font-weight: 700; }
+  .list-arrow { color: #555; font-size: 16px; }
+
+  /* 积分中心 */
+  .win-notice { margin: 12px 16px; padding: 12px 14px; background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(20,20,20,1)); border: 1px solid rgba(34,197,94,0.3); border-radius: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .win-notice-icon { font-size: 24px; }
+  .win-notice-title { font-size: 13px; font-weight: 800; color: #4ade80; }
+  .win-notice-sub { font-size: 10px; color: #aaa; margin-top: 2px; }
+
+  .pc-hero { margin: 0 16px 14px; padding: 16px; border-radius: 18px; background: radial-gradient(circle at 90% 10%, rgba(212,175,55,0.4) 0%, transparent 50%), radial-gradient(circle at 10% 90%, rgba(168,128,42,0.3) 0%, transparent 50%), linear-gradient(135deg, #2a1f0a 0%, #1a1410 50%, #0f0a05 100%); border: 1px solid rgba(212,175,55,0.35); }
+  .pc-user { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .pc-user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #D4AF37, #8B6914); color: #000; font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .pc-user-info { flex: 1; }
+  .pc-user-name { font-size: 14px; font-weight: 700; }
+  .pc-user-desc { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .pc-user-btn { font-size: 11px; color: #F8DC7A; padding: 4px 10px; border: 1px solid rgba(212,175,55,0.4); border-radius: 12px; cursor: pointer; }
+  
+  .pc-account-switcher { display: flex; gap: 6px; margin-bottom: 12px; }
+  .pc-acc-tab { flex: 1; padding: 10px 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; text-align: center; transition: all 0.2s; }
+  .pc-acc-tab.active { background: rgba(212,175,55,0.15); border-color: rgba(212,175,55,0.4); }
+  .pc-acc-tab-title { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+  .pc-acc-tab-num { font-size: 18px; font-weight: 900; }
+  .pc-acc-tab-reset { font-size: 9px; color: #F8DC7A; margin-top: 2px; }
+  
+  .pc-acc-detail { padding: 10px 12px; background: rgba(0,0,0,0.4); border-radius: 10px; margin-top: 10px; font-size: 11px; color: #aaa; line-height: 1.6; }
+  .pc-acc-detail b { color: #F8DC7A; }
+
+  .pc-rank { margin: 0 16px 14px; padding: 14px; background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%); border: 1px solid rgba(239,68,68,0.3); border-radius: 14px; cursor: pointer; }
+  .pc-rank-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .pc-rank-title { font-size: 13px; font-weight: 800; flex: 1; }
+  .pc-rank-tag { font-size: 10px; color: #4ade80; background: rgba(34,197,94,0.15); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+  .pc-rank-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .pc-rank-num { font-size: 28px; font-weight: 900; }
+  .pc-rank-info-top { font-size: 11px; color: #888; }
+  .pc-rank-info-bot { font-size: 16px; font-weight: 800; color: #F8DC7A; }
+  .pc-rank-tip { font-size: 11px; color: #aaa; padding: 8px; background: rgba(255,255,255,0.04); border-radius: 8px; }
+  
+  .pc-countdown-box { margin: 0 16px 14px; padding: 12px 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: flex; align-items: center; gap: 10px; }
+  .pc-countdown-label { font-size: 12px; color: #ccc; flex: 1; line-height: 1.3; }
+  .pc-countdown-label small { font-size: 10px; color: #888; }
+  .pc-countdown { display: flex; gap: 3px; font-family: "SF Mono", Menlo, monospace; }
+  .pc-count-unit { background: #000; color: #ef4444; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; min-width: 24px; text-align: center; }
+
+  .pools-card { margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .pools-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .pools-title { font-size: 14px; font-weight: 800; }
+  .pools-switcher { display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 3px; border-radius: 8px; }
+  .pools-switch { font-size: 10px; padding: 4px 10px; border-radius: 6px; color: #888; cursor: pointer; }
+  .pools-switch.active { background: rgba(212,175,55,0.2); color: #F8DC7A; font-weight: 700; }
+
+  .pool-row { margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 10px; cursor: pointer; }
+  .pool-row:last-child { margin-bottom: 0; }
+  .pool-info { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .pool-name { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .pool-tasks { font-size: 9px; color: #666; font-weight: 500; }
+  .pool-progress-num { font-size: 11px; color: #ccc; font-family: "SF Mono", Menlo, monospace; }
+  .pool-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .pool-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+  .pool-fill.c { background: linear-gradient(90deg, #F8DC7A, #D4AF37); }
+  .pool-fill.d { background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
+  .pool-fill.n { background: linear-gradient(90deg, #4ade80, #22c55e); }
+  .pool-fill.r { background: linear-gradient(90deg, #fb923c, #f97316); }
+  .pool-tip { font-size: 10px; color: #F8DC7A; margin-top: 6px; padding: 6px 8px; background: rgba(212,175,55,0.08); border-radius: 6px; }
+  .pool-warn { font-size: 10px; color: #fca5a5; margin-top: 6px; }
+  .pools-note { margin-top: 10px; padding: 8px; background: rgba(96,165,250,0.08); border-radius: 8px; font-size: 10px; color: #93c5fd; line-height: 1.5; }
+
+  .pc-entries { margin: 0 16px 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .pc-entry { aspect-ratio: 1/1; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; position: relative; }
+  .pc-entry-icon { font-size: 26px; }
+  .pc-entry-label { font-size: 11px; color: #ddd; }
+  .pc-entry-plus { position: absolute; top: 6px; right: 8px; font-size: 9px; color: #F8DC7A; font-weight: 700; }
+
+  .section-head { padding: 0 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .section-head-title { font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .section-head-more { font-size: 11px; color: #888; cursor: pointer; }
+
+  .week-rotate { margin: 0 16px 14px; padding: 14px; background: linear-gradient(135deg, rgba(96,165,250,0.1), rgba(20,20,20,1)); border: 1px solid rgba(96,165,250,0.25); border-radius: 14px; }
+  .wr-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .wr-title { font-size: 13px; font-weight: 800; color: #93c5fd; flex: 1; }
+  .wr-week-tag { font-size: 10px; padding: 2px 8px; background: rgba(96,165,250,0.2); border-radius: 10px; color: #93c5fd; font-weight: 700; }
+  .wr-desc { font-size: 11px; color: #aaa; margin-bottom: 10px; }
+  .wr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-bottom: 8px; }
+  .wr-tab { padding: 6px 4px; background: rgba(0,0,0,0.3); border-radius: 6px; text-align: center; cursor: pointer; font-size: 10px; }
+  .wr-tab.active { background: rgba(96,165,250,0.25); color: #93c5fd; font-weight: 700; }
+  .wr-list { display: flex; flex-direction: column; gap: 4px; }
+  .wr-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .wr-item-id { font-family: "SF Mono", Menlo, monospace; color: #F8DC7A; font-size: 10px; font-weight: 700; min-width: 32px; }
+  .wr-item-name { flex: 1; color: #ddd; margin: 0 8px; }
+  .wr-item-pts { color: #F8DC7A; font-weight: 700; }
+  .wr-total { margin-top: 8px; padding: 8px; background: rgba(212,175,55,0.1); border-radius: 8px; text-align: center; font-size: 11px; }
+  .wr-total b { color: #F8DC7A; font-size: 13px; }
+
+  .prize-scroll { padding: 0 16px 16px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+  .prize-scroll::-webkit-scrollbar { display: none; }
+  .prize-card { min-width: 160px; padding: 12px; border-radius: 12px; background: #141414; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+  .prize-card.gold { background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.4); }
+  .prize-card.red { background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(20,20,20,1)); border: 1px solid rgba(239,68,68,0.3); }
+  .prize-badge { font-size: 10px; color: #F8DC7A; margin-bottom: 6px; font-weight: 700; }
+  .prize-badge.red-tag { color: #f87171; }
+  .prize-icon { font-size: 28px; margin-bottom: 6px; }
+  .prize-title { font-size: 12px; color: #ccc; margin-bottom: 4px; }
+  .prize-amount { font-size: 20px; font-weight: 900; }
+  .prize-unit { font-size: 10px; color: #888; margin-top: 2px; }
+
+  .task-list { margin: 0 16px 16px; }
+  .task-item { padding: 12px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
+  .task-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .task-info { flex: 1; min-width: 0; }
+  .task-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .task-id { font-size: 9px; color: #888; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+  .task-desc { font-size: 11px; color: #888; }
+  .task-action { padding: 7px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; flex-shrink: 0; }
+  .task-action.gold-btn { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; }
+  .task-action.claim { background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); animation: pulse-green 1.5s infinite; }
+  @keyframes pulse-green { 0%,100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); } 50% { box-shadow: 0 0 0 6px rgba(34,197,94,0); } }
+  .task-action.done { background: rgba(255,255,255,0.06); color: #666; }
+
+  .winners-list { margin: 0 16px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 4px 0; }
+  .winner-row { padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+  .winner-row:last-child { border-bottom: none; }
+  .winner-rank { width: 24px; height: 24px; background: rgba(255,255,255,0.06); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .winner-rank.top1 { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; }
+  .winner-rank.top2 { background: #9ca3af; color: #000; }
+  .winner-rank.top3 { background: #b45309; color: #fff; }
+  .winner-name { flex: 1; font-size: 13px; }
+  .winner-prize { font-size: 12px; color: #F8DC7A; font-weight: 700; }
+  .winners-summary { margin: 10px 16px 40px; padding: 10px; background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.2); border-radius: 10px; text-align: center; font-size: 12px; color: #ccc; }
+  .winners-summary b { color: #F8DC7A; }
+
+  /* 任务中心 */
+  .tc-tabs { padding: 10px 16px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; background: #0a0a0a; position: sticky; top: 54px; z-index: 9; }
+  .tc-tabs::-webkit-scrollbar { display: none; }
+  .tc-tab { padding: 6px 12px; background: rgba(255,255,255,0.06); border-radius: 20px; font-size: 12px; color: #aaa; white-space: nowrap; cursor: pointer; }
+  .tc-tab.active { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; font-weight: 700; }
+  .tc-warn { margin: 8px 16px 14px; padding: 10px 12px; background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.3); border-radius: 10px; font-size: 11px; color: #fb923c; display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
+
+  .tc-task { margin: 0 16px 8px; padding: 12px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .tc-task-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .tc-task-body { flex: 1; min-width: 0; }
+  .tc-task-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+  .tc-task-id { font-size: 9px; color: #F8DC7A; background: rgba(212,175,55,0.1); padding: 1px 5px; border-radius: 3px; font-family: "SF Mono", Menlo, monospace; font-weight: 700; }
+  .tc-task-name { font-size: 13px; font-weight: 700; }
+  .tc-task-status { font-size: 9px; padding: 1px 5px; border-radius: 3px; }
+  .tc-task-status.done-tag { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .tc-task-status.lock-tag { background: rgba(255,255,255,0.06); color: #666; }
+  .tc-task-status.rotate-tag { background: rgba(96,165,250,0.15); color: #93c5fd; }
+  .tc-task-status.passive-tag { background: rgba(168,85,247,0.15); color: #c4b5fd; }
+  .tc-task-status.perm-tag { background: rgba(212,175,55,0.15); color: #F8DC7A; }
+  .tc-task-status.ms-tag { background: rgba(251,146,60,0.15); color: #fb923c; }
+  .tc-task-desc { font-size: 10.5px; color: #888; margin-bottom: 6px; line-height: 1.4; }
+  .tc-task-progress { display: flex; align-items: center; gap: 8px; }
+  .tc-task-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .tc-task-bar-fill { height: 100%; background: linear-gradient(90deg, #F8DC7A, #D4AF37); border-radius: 2px; }
+  .tc-task-ratio { font-size: 10px; color: #666; }
+  .tc-task-reward { text-align: center; white-space: nowrap; font-size: 14px; font-weight: 900; color: #F8DC7A; min-width: 50px; }
+
+  .tc-cat-header { padding: 14px 16px 8px; font-size: 13px; font-weight: 800; color: #ccc; display: flex; align-items: center; gap: 8px; }
+  .tc-cat-header-icon { font-size: 16px; }
+  .tc-pool-summary { margin: 0 16px 12px; padding: 10px 12px; background: rgba(212,175,55,0.06); border-radius: 10px; font-size: 11px; color: #aaa; line-height: 1.5; }
+  .tc-pool-summary b { color: #F8DC7A; }
+
+  .checkin-milestone { margin: 14px 16px 10px; padding: 14px; background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.25); border-radius: 14px; }
+  .cm-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cm-title { font-size: 13px; font-weight: 800; }
+  .cm-day { font-size: 11px; color: #F8DC7A; font-weight: 700; }
+  .cm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; }
+  .cm-day-cell { aspect-ratio: 1/1.1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #666; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+  .cm-day-cell.done { background: rgba(212,175,55,0.15); color: #F8DC7A; border-color: rgba(212,175,55,0.3); }
+  .cm-day-cell.today { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; font-weight: 900; }
+  .cm-milestones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .cm-ms { padding: 8px 4px; background: rgba(255,255,255,0.04); border-radius: 8px; text-align: center; position: relative; cursor: pointer; }
+  .cm-ms.achieved { background: rgba(34,197,94,0.1); }
+  .cm-ms-icon { font-size: 18px; }
+  .cm-ms-day { font-size: 10px; color: #aaa; margin-top: 2px; }
+  .cm-ms-point { font-size: 11px; color: #F8DC7A; font-weight: 700; }
+  .cm-ms-done { position: absolute; top: 2px; right: 4px; font-size: 10px; color: #4ade80; }
+
+  /* 排行榜 */
+  .lb-tabs { padding: 10px 16px; display: flex; gap: 8px; background: #0a0a0a; }
+  .lb-tab { padding: 6px 14px; background: rgba(255,255,255,0.06); border-radius: 20px; font-size: 12px; color: #aaa; cursor: pointer; }
+  .lb-tab.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 700; }
+  .lb-countdown { margin: 6px 16px 14px; padding: 10px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .lb-countdown-time { color: #ef4444; font-weight: 700; font-family: "SF Mono", Menlo, monospace; }
+
+  .lb-podium { margin: 0 16px 14px; padding: 16px 10px 12px; background: linear-gradient(180deg, rgba(212,175,55,0.15) 0%, rgba(20,20,20,1) 100%); border: 1px solid rgba(212,175,55,0.25); border-radius: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+  .lb-top { text-align: center; position: relative; cursor: pointer; }
+  .lb-top-avatar { width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .lb-top-avatar.g1 { background: linear-gradient(135deg, #F8DC7A, #D4AF37); border: 2px solid #fff; width: 56px; height: 56px; }
+  .lb-top-avatar.g2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+  .lb-top-avatar.g3 { background: linear-gradient(135deg, #c2410c, #92400e); }
+  .lb-top-crown { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 18px; }
+  .lb-top-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .lb-top-score { font-size: 13px; font-weight: 900; color: #F8DC7A; }
+  .lb-top-rank { font-size: 10px; color: #888; }
+
+  .my-rank-card { margin: 0 16px 14px; padding: 14px; background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(168,85,247,0.12)); border: 1px solid rgba(96,165,250,0.3); border-radius: 14px; display: flex; align-items: center; gap: 12px; }
+  .my-rank-num { font-size: 26px; font-weight: 900; color: #fff; min-width: 36px; }
+  .my-rank-title { font-size: 13px; font-weight: 700; }
+  .my-rank-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .my-rank-go { padding: 8px 14px; background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; border-radius: 16px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+  .lb-sec-title { padding: 4px 16px 8px; font-size: 12px; color: #888; display: flex; justify-content: space-between; }
+  .lb-list { margin: 0 16px 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden; }
+  .lb-row { padding: 10px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row.me { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.3); margin: 4px; border-radius: 10px; }
+  .lb-row-rank { width: 26px; font-size: 12px; font-weight: 700; color: #888; text-align: center; }
+  .lb-row-rank.me-rank { color: #F8DC7A; }
+  .lb-row-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4a5568, #2d3748); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .lb-row-body { flex: 1; min-width: 0; }
+  .lb-row-name { font-size: 13px; font-weight: 600; }
+  .lb-row-score { font-size: 11px; color: #888; margin-top: 1px; }
+  .lb-row-trend { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+  .lb-row-trend.up { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .lb-row-trend.down { background: rgba(239,68,68,0.15); color: #f87171; }
+  .lb-row-trend.same { background: rgba(255,255,255,0.05); color: #888; }
+  .lb-row-prize { font-size: 11px; color: #F8DC7A; font-weight: 700; min-width: 60px; text-align: right; }
+  .lb-prize-band { padding: 8px 14px; font-size: 10px; color: #888; background: rgba(0,0,0,0.4); border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; justify-content: space-between; align-items: center; }
+  .lb-prize-band b { color: #F8DC7A; }
+
+  /* 奖品 */
+  .rw-hero { margin: 14px 16px; padding: 18px; background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; text-align: center; }
+  .rw-hero-label { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+  .rw-hero-num { font-size: 32px; font-weight: 900; color: #F8DC7A; margin-bottom: 4px; }
+  .rw-hero-sub { font-size: 11px; color: #888; }
+  .rw-hero-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .rw-hero-item { padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; cursor: pointer; }
+  .rw-hero-item-num { font-size: 16px; font-weight: 900; color: #F8DC7A; }
+  .rw-hero-item-label { font-size: 10px; color: #aaa; margin-top: 2px; }
+  .rw-cat-title { padding: 0 16px; font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+  .rw-cats { padding: 0 16px 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rw-cat { padding: 14px 8px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; }
+  .rw-cat.selected { border-color: rgba(212,175,55,0.5); background: rgba(212,175,55,0.08); }
+  .rw-cat-icon { font-size: 26px; margin-bottom: 4px; }
+  .rw-cat-name { font-size: 11px; font-weight: 600; color: #ddd; }
+  .rw-cat-desc { font-size: 9px; color: #666; margin-top: 2px; }
+  .rw-sec { margin: 0 16px 16px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .rw-sec-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .rw-prize-row { padding: 8px 0; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+  .rw-prize-row:last-child { border-bottom: none; }
+  .rw-prize-emoji { font-size: 18px; width: 24px; text-align: center; }
+  .rw-prize-name { flex: 1; font-size: 12px; color: #ddd; }
+  .rw-prize-value { font-size: 12px; font-weight: 700; color: #F8DC7A; }
+  .rw-prize-tag { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 700; background: rgba(212,175,55,0.15); color: #F8DC7A; margin-left: 4px; }
+
+  /* 邀请 */
+  .iv-hero { margin: 14px 16px; padding: 20px 18px; background: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.3), transparent 70%), linear-gradient(135deg, #2a1f0a, #1a1410); border: 1px solid rgba(212,175,55,0.3); border-radius: 18px; text-align: center; }
+  .iv-hero-label { font-size: 12px; color: #aaa; margin-bottom: 6px; }
+  .iv-hero-num { font-size: 44px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .iv-hero-sub { font-size: 12px; color: #ccc; }
+  .iv-hero-plus { display: inline-block; margin-top: 10px; font-size: 11px; color: #F8DC7A; padding: 4px 10px; border: 1px solid rgba(212,175,55,0.4); border-radius: 12px; cursor: pointer; }
+
+  .comm-tracker { margin: 0 16px 14px; padding: 14px; background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(251,146,60,0.1), rgba(20,20,20,1)); border: 1px solid rgba(168,85,247,0.35); border-radius: 16px; }
+  .ct-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .ct-title { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .ct-live-dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: livePulse 1.5s infinite; }
+  @keyframes livePulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74,222,128,0.8); } 50% { opacity: 0.6; box-shadow: 0 0 0 8px rgba(74,222,128,0); } }
+  .ct-more { font-size: 11px; color: #c4b5fd; cursor: pointer; }
+  .ct-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .ct-summary-cell { padding: 10px 6px; background: rgba(0,0,0,0.35); border-radius: 10px; text-align: center; cursor: pointer; }
+  .ct-sc-label { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+  .ct-sc-num { font-size: 17px; font-weight: 900; line-height: 1; }
+  .ct-sc-num.today { color: #4ade80; }
+  .ct-sc-num.week { color: #60a5fa; }
+  .ct-sc-num.total { color: #F8DC7A; }
+  .ct-sc-sub { font-size: 9px; color: #666; margin-top: 3px; }
+  .ct-caps { display: flex; gap: 8px; margin-bottom: 10px; }
+  .ct-cap-item { flex: 1; padding: 8px 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 10px; color: #aaa; display: flex; justify-content: space-between; align-items: center; }
+  .ct-cap-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin: 0 8px; }
+  .ct-cap-fill { height: 100%; background: linear-gradient(90deg, #F8DC7A, #D4AF37); border-radius: 2px; }
+  .ct-cap-num { color: #F8DC7A; font-weight: 700; font-family: "SF Mono", Menlo, monospace; white-space: nowrap; font-size: 10px; }
+  .ct-list-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 11px; color: #888; }
+  .ct-list-tabs { display: flex; gap: 4px; background: rgba(0,0,0,0.4); padding: 2px; border-radius: 6px; }
+  .ct-list-tab { font-size: 10px; padding: 3px 8px; border-radius: 4px; cursor: pointer; color: #666; }
+  .ct-list-tab.active { background: rgba(168,85,247,0.25); color: #c4b5fd; font-weight: 700; }
+  .ct-invitee { padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid rgba(255,255,255,0.04); }
+  .ct-invitee.today-active { border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.05); }
+  .ct-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; flex-shrink: 0; }
+  .ct-av-1 { background: linear-gradient(135deg, #60a5fa, #3b82f6); color: #fff; }
+  .ct-av-2 { background: linear-gradient(135deg, #f472b6, #ec4899); color: #fff; }
+  .ct-av-3 { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+  .ct-av-4 { background: linear-gradient(135deg, #4ade80, #22c55e); color: #fff; }
+  .ct-av-5 { background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: #fff; }
+  .ct-inv-body { flex: 1; min-width: 0; }
+  .ct-inv-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+  .ct-inv-name { font-size: 13px; font-weight: 700; }
+  .ct-inv-status { font-size: 9px; padding: 1px 4px; border-radius: 3px; }
+  .ct-inv-status.active-now { background: rgba(74,222,128,0.2); color: #4ade80; display: inline-flex; align-items: center; gap: 3px; }
+  .ct-inv-status.active-now::before { content: ''; width: 5px; height: 5px; background: #4ade80; border-radius: 50%; animation: livePulse 1.5s infinite; }
+  .ct-inv-status.kyc { background: rgba(96,165,250,0.15); color: #60a5fa; }
+  .ct-inv-status.new { background: rgba(251,146,60,0.15); color: #fb923c; }
+  .ct-inv-status.sleep { background: rgba(255,255,255,0.06); color: #666; }
+  .ct-inv-meta { font-size: 10px; color: #888; }
+  .ct-inv-values { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+  .ct-inv-today { font-size: 13px; font-weight: 900; color: #4ade80; }
+  .ct-inv-today.zero { color: #555; }
+  .ct-inv-total { font-size: 10px; color: #888; }
+  .ct-inv-total b { color: #F8DC7A; }
+
+  .iv-progress { margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .iv-progress-head { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .iv-progress-title { font-size: 13px; font-weight: 700; }
+  .iv-progress-more { font-size: 11px; color: #F8DC7A; cursor: pointer; }
+  .iv-progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+  .iv-progress-fill { height: 100%; background: linear-gradient(90deg, #F8DC7A, #D4AF37); width: 30%; border-radius: 4px; }
+  .iv-progress-txt { font-size: 11px; color: #888; }
+  .iv-progress-tip { font-size: 10px; color: #F8DC7A; margin-top: 6px; padding: 6px 8px; background: rgba(212,175,55,0.08); border-radius: 6px; }
+
+  .iv-stages { margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .iv-stages-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+  .iv-stage { padding: 10px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .iv-stage-icon { width: 32px; height: 32px; background: rgba(212,175,55,0.12); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #F8DC7A; font-family: "SF Mono", Menlo, monospace; }
+  .iv-stage-info { flex: 1; }
+  .iv-stage-name { font-size: 12px; font-weight: 700; }
+  .iv-stage-desc { font-size: 10px; color: #888; margin-top: 1px; }
+  .iv-stage-point { font-size: 13px; font-weight: 900; color: #F8DC7A; }
+  .iv-stage-total { margin-top: 6px; padding: 10px; text-align: center; background: linear-gradient(135deg, rgba(212,175,55,0.2), rgba(20,20,20,1)); border-radius: 10px; }
+  .iv-stage-total-num { font-size: 18px; font-weight: 900; color: #F8DC7A; }
+
+  .iv-share-title { padding: 0 16px; font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+  .iv-share { margin: 0 16px 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .iv-share-btn { padding: 14px 4px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; text-align: center; cursor: pointer; }
+  .iv-share-icon { font-size: 22px; margin-bottom: 4px; }
+  .iv-share-label { font-size: 10px; color: #ccc; }
+  .iv-link { margin: 0 16px 14px; padding: 12px; background: #141414; border: 1px dashed rgba(212,175,55,0.4); border-radius: 10px; display: flex; align-items: center; gap: 10px; }
+  .iv-link-text { flex: 1; font-size: 11px; color: #aaa; font-family: "SF Mono", Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .iv-link-btn { padding: 6px 10px; background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; font-size: 11px; font-weight: 700; border-radius: 8px; cursor: pointer; }
+
+  /* 受邀人详情 */
+  .invitee-hero { margin: 14px 16px; padding: 18px; background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(20,20,20,1)); border: 1px solid rgba(168,85,247,0.3); border-radius: 16px; text-align: center; }
+  .invitee-hero-avatar { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; }
+  .invitee-hero-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+  .invitee-hero-meta { font-size: 11px; color: #aaa; margin-bottom: 12px; }
+  .invitee-hero-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .ih-stat { padding: 10px 6px; background: rgba(0,0,0,0.4); border-radius: 10px; cursor: pointer; }
+  .ih-stat-label { font-size: 10px; color: #aaa; }
+  .ih-stat-num { font-size: 16px; font-weight: 900; margin-top: 3px; }
+
+  .invitee-timeline { margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .it-title { font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+  .it-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .it-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .it-dot.done { background: #4ade80; }
+  .it-dot.pending { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); }
+  .it-body { flex: 1; }
+  .it-stage { font-size: 12px; font-weight: 700; }
+  .it-time { font-size: 10px; color: #888; margin-top: 2px; }
+  .it-pts { font-size: 12px; font-weight: 700; color: #F8DC7A; }
+  .it-pts.pending { color: #555; }
+
+  .comm-history { margin: 0 16px 40px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; }
+  .ch-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+  .ch-row { padding: 8px 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ch-row:last-child { border: none; }
+  .ch-task { font-size: 12px; color: #ddd; }
+  .ch-task small { color: #666; font-size: 10px; }
+  .ch-time { font-size: 10px; color: #666; margin-top: 2px; }
+  .ch-val { color: #4ade80; font-weight: 700; font-size: 13px; }
+  .ch-val.capped { color: #fb923c; }
+
+  /* 积分明细 */
+  .pd-hero { margin: 14px 16px; padding: 20px; background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; text-align: center; }
+  .pd-hero-label { font-size: 12px; color: #aaa; margin-bottom: 6px; }
+  .pd-hero-num { font-size: 40px; font-weight: 900; color: #F8DC7A; line-height: 1; margin-bottom: 6px; }
+  .pd-hero-desc { font-size: 11px; color: #888; }
+  .pd-filter { padding: 0 16px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .pd-filter::-webkit-scrollbar { display: none; }
+  .pd-filter-item { padding: 5px 12px; background: rgba(255,255,255,0.06); border-radius: 16px; font-size: 11px; color: #aaa; white-space: nowrap; cursor: pointer; }
+  .pd-filter-item.active { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; font-weight: 700; }
+  .pd-group-title { padding: 0 16px; font-size: 11px; color: #666; margin-bottom: 6px; font-weight: 600; }
+  .pd-list { margin: 0 16px 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
+  .pd-item { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; }
+  .pd-item:last-child { border-bottom: none; }
+  .pd-icon { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .pd-body { flex: 1; }
+  .pd-name { font-size: 13px; font-weight: 600; }
+  .pd-meta { font-size: 10px; color: #666; margin-top: 2px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .pd-pool-tag { font-size: 9px; padding: 1px 4px; border-radius: 3px; }
+  .pd-pool-tag.c { background: rgba(212,175,55,0.15); color: #F8DC7A; }
+  .pd-pool-tag.d { background: rgba(168,85,247,0.15); color: #c4b5fd; }
+  .pd-pool-tag.n { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .pd-pool-tag.r { background: rgba(251,146,60,0.15); color: #fdba74; }
+  .pd-cap { font-size: 9px; padding: 1px 4px; border-radius: 3px; background: rgba(239,68,68,0.15); color: #f87171; }
+  .pd-value { font-size: 15px; font-weight: 900; color: #4ade80; }
+  .pd-value.capped { color: #f87171; }
+  .pd-empty { padding: 30px 20px; text-align: center; color: #555; font-size: 12px; }
+
+  /* 帮助 */
+  .help-item { margin: 0 16px 10px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; cursor: pointer; }
+  .help-q { font-size: 13px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .help-q-arrow { color: #666; transition: transform 0.2s; }
+  .help-item.open .help-q-arrow { transform: rotate(90deg); }
+  .help-a { font-size: 11px; color: #aaa; line-height: 1.7; display: none; }
+  .help-item.open .help-a { display: block; }
+  .help-a b { color: #F8DC7A; }
+
+  /* 收件箱 */
+  .inbox-item { margin: 0 16px 10px; padding: 12px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; display: flex; gap: 10px; cursor: pointer; }
+  .inbox-item.unread { border-color: rgba(212,175,55,0.3); }
+  .inbox-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .inbox-icon.award { background: rgba(212,175,55,0.15); }
+  .inbox-icon.point { background: rgba(34,197,94,0.15); }
+  .inbox-icon.sys { background: rgba(96,165,250,0.15); }
+  .inbox-body { flex: 1; min-width: 0; }
+  .inbox-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+  .inbox-dot { width: 6px; height: 6px; background: #ef4444; border-radius: 50%; }
+  .inbox-desc { font-size: 11px; color: #aaa; line-height: 1.5; }
+  .inbox-time { font-size: 10px; color: #666; margin-top: 4px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.show { display: flex; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-sheet { width: 100%; max-width: 430px; background: #141414; border-radius: 20px 20px 0 0; padding: 20px 16px 30px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 40px; height: 4px; background: #444; border-radius: 2px; margin: 0 auto 14px; }
+  .modal-title { font-size: 17px; font-weight: 800; margin-bottom: 4px; text-align: center; }
+  .modal-sub { font-size: 12px; color: #888; text-align: center; margin-bottom: 20px; }
+  .modal-btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer; margin-bottom: 8px; }
+  .modal-btn.primary { background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; }
+  .modal-btn.secondary { background: rgba(255,255,255,0.06); color: #ddd; }
+  .modal-btn.danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+  .modal-list-item { padding: 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+  .modal-list-item:last-child { border: none; }
+
+  /* Toast */
+  .toast { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); background: rgba(20,20,20,0.95); border: 1px solid rgba(212,175,55,0.4); backdrop-filter: blur(10px); padding: 14px 22px; border-radius: 14px; font-size: 14px; font-weight: 700; z-index: 600; display: none; color: #F8DC7A; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+  .toast.show { display: block; animation: float-up 0.3s ease-out; }
+  @keyframes float-up { 0% { opacity: 0; transform: translate(-50%, 10px); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ 首页 ============ -->
+  <div class="page tab-page active" id="tabHome">
+    <div class="status-bar"><span>11:04</span><div class="status-icons">🔕 📶 60% 🔋</div></div>
+    <div class="home-header">
+      <div class="home-logo" onclick="openStack('profile')">N</div>
+      <div class="home-tabs" id="homeTabs"></div>
+      <div class="home-search" onclick="openModal('searchModal')">🔍</div>
+    </div>
+    
+    <div class="activity-banner" onclick="openStack('points-center')">
+      <div class="banner-content">
+        <div class="banner-icon">🏆</div>
+        <div style="flex: 1; min-width: 0;">
+          <div class="banner-tag">⏰ 週榜倒計時 · 2天</div>
+          <div class="banner-title gold-text">週榜獎池 11,700 HKD · 100人獲獎</div>
+          <div class="banner-sub">完成任務衝榜 · 月榜 32,600 HKD 同步開啟</div>
+        </div>
+        <div class="banner-cta">衝榜 ›</div>
+      </div>
+    </div>
+    
+    <div class="categories" id="catList"></div>
+    <div class="feed" id="feedList"></div>
+    
+    <div class="floating-stack">
+      <div class="task-ball" onclick="openStack('points-center')">🎁<div class="task-badge">3</div></div>
+      <div class="ai-ball" onclick="openModal('aiModal')">🤖</div>
+    </div>
+  </div>
+
+  <!-- 行情 -->
+  <div class="page tab-page" id="tabMarket">
+    <div class="status-bar"><span>11:04</span><div class="status-icons">🔕 📶 60% 🔋</div></div>
+    <div style="padding: 16px 16px 4px;"><h1 style="font-size: 22px; font-weight: 800;">📊 行情</h1></div>
+    <div style="padding: 0 16px 12px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;" id="marketTabs"></div>
+    <div id="marketContent" style="padding: 0 16px 140px;"></div>
+  </div>
+
+  <!-- 自选 -->
+  <div class="page tab-page" id="tabWatchlist">
+    <div class="status-bar"><span>11:04</span><div class="status-icons">🔕 📶 60% 🔋</div></div>
+    <div style="padding: 16px 16px 8px;"><h1 style="font-size: 22px; font-weight: 800;">⭐ 自選</h1></div>
+    <div id="watchlistContent" style="padding: 0 16px 140px;"></div>
+  </div>
+
+  <!-- 交易 -->
+  <div class="page tab-page" id="tabTrade">
+    <div class="status-bar"><span>11:04</span><div class="status-icons">🔕 📶 60% 🔋</div></div>
+    <div style="padding: 4px 16px 14px; display: flex; align-items: center; justify-content: space-between;">
+      <div><h1 style="font-size: 22px; font-weight: 800;">💹 交易</h1><div style="font-size: 11px; color: #888; margin-top: 2px;">港股/美股/期權</div></div>
+      <div class="clickable" style="width: 36px; height: 36px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;" onclick="showToast('掃碼搜索')">📷</div>
+    </div>
+    <div id="tradeContent" style="padding-bottom: 140px;"></div>
+  </div>
+
+  <!-- ============ 个人中心 ============ -->
+  <div class="page stack-page" id="page-profile">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">個人中心</div><div class="header-crumb">首頁 / 個人中心</div></div>
+      <div class="header-icon" onclick="openModal('settingsModal')">⚙️</div>
+    </div>
+    <div class="profile-hero">
+      <div class="profile-head" onclick="openModal('editProfileModal')">
+        <div class="profile-avatar">CW</div>
+        <div style="flex: 1;">
+          <div class="profile-name">Chris Wong <span style="font-size: 10px; color: #F8DC7A;">›</span></div>
+          <div class="profile-id">ID: NF20250318 · 已註冊 62 天</div>
+          <div class="profile-tags">
+            <span class="profile-tag" onclick="event.stopPropagation(); showToast('✅ 你已完成 KYC 認證')">✅ 已開戶</span>
+            <span class="profile-tag" style="background: rgba(212,175,55,0.15); color: #F8DC7A; border-color: rgba(212,175,55,0.3);" onclick="event.stopPropagation(); openModal('badgesModal')">🏅 7日簽到</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="three-account-card" onclick="openStack('points-center')">
+      <div class="tac-top"><div class="tac-label gold-text">💎 我的積分</div><div class="tac-more">積分中心 ›</div></div>
+      <div class="tac-accounts">
+        <div class="tac-acc clickable" onclick="event.stopPropagation(); openStack('points-detail')"><div class="tac-acc-title">歷史累計</div><div class="tac-acc-num gold-text">24,860</div><div class="tac-acc-tag perm">永久</div></div>
+        <div class="tac-acc clickable" onclick="event.stopPropagation(); openStack('leaderboard')"><div class="tac-acc-title">本週積分</div><div class="tac-acc-num gold-text">3,420</div><div class="tac-acc-tag week">週榜 #47</div></div>
+        <div class="tac-acc clickable" onclick="event.stopPropagation(); openStack('leaderboard')"><div class="tac-acc-title">本月積分</div><div class="tac-acc-num gold-text">8,750</div><div class="tac-acc-tag month">月榜 #82</div></div>
+      </div>
+      <div class="tac-rules">💡 <b>週積分</b>每週一 00:00 清零 · <b>月積分</b>每月 1 日 00:00 清零 · <b>歷史累計</b>永久保留可兌換商城</div>
+    </div>
+    <div class="asset-card" onclick="switchTab('trade')">
+      <div class="asset-icon">💹</div>
+      <div class="asset-body"><div class="asset-title">我的交易帳戶</div><div class="asset-num">HKD 128,450</div><div class="asset-sub">今日盈虧 +1,250 (+0.98%)</div></div>
+      <div style="color: #555; font-size: 16px;">›</div>
+    </div>
+    <div class="quick-row">
+      <div class="quick-item" onclick="openStack('task-center')"><div class="quick-icon">📝</div><div class="quick-label">做任務</div><div class="quick-badge">3</div></div>
+      <div class="quick-item" onclick="openStack('invite')"><div class="quick-icon">👥</div><div class="quick-label">邀請好友</div></div>
+      <div class="quick-item" onclick="openStack('rewards')"><div class="quick-icon">🎁</div><div class="quick-label">獎品專區</div></div>
+      <div class="quick-item" onclick="openStack('leaderboard')"><div class="quick-icon">🏆</div><div class="quick-label">排行榜</div></div>
+    </div>
+    <div class="list-group">
+      <div class="list-item" onclick="openStack('invite')">
+        <div class="list-icon" style="background: rgba(236,72,153,0.15);">👥</div>
+        <div class="list-text"><div class="list-title">我的邀請</div><div class="list-desc">5 人已邀請 · 今日返佣 +80 分</div></div>
+        <div class="list-extra">+80</div><div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openStack('commission-detail')">
+        <div class="list-icon" style="background: rgba(251,146,60,0.15);">💰</div>
+        <div class="list-text"><div class="list-title">返佣明細</div><div class="list-desc">誰貢獻了多少返佣 · 實時追蹤</div></div>
+        <div class="list-extra">1,240</div><div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openStack('points-detail')">
+        <div class="list-icon" style="background: rgba(96,165,250,0.15);">📊</div>
+        <div class="list-text"><div class="list-title">積分明細</div><div class="list-desc">查看來源任務、所屬池、是否封頂</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openStack('mall')">
+        <div class="list-icon" style="background: rgba(212,175,55,0.15);">🛍️</div>
+        <div class="list-text"><div class="list-title">積分商城</div><div class="list-desc">用歷史累計積分兌換權益</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openModal('badgesModal')">
+        <div class="list-icon" style="background: rgba(168,85,247,0.15);">🏅</div>
+        <div class="list-text"><div class="list-title">我的徽章</div><div class="list-desc">已獲得 3 / 12 枚</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openStack('win-history')">
+        <div class="list-icon" style="background: rgba(34,197,94,0.15);">🏆</div>
+        <div class="list-text"><div class="list-title">歷屆獲獎記錄</div><div class="list-desc">共獲獎 3 次 · 累計 450 HKD</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+    </div>
+    <div class="list-group">
+      <div class="list-item" onclick="openStack('inbox')">
+        <div class="list-icon" style="background: rgba(251,146,60,0.15);">📬</div>
+        <div class="list-text"><div class="list-title">站內收件箱</div><div class="list-desc">積分提醒、獲獎通知</div></div>
+        <div style="background: #ef4444; color: #fff; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 700;">3</div>
+        <div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openModal('kolModal')">
+        <div class="list-icon" style="background: rgba(212,175,55,0.15);">⭐</div>
+        <div class="list-text"><div class="list-title">KOL 認證申請</div><div class="list-desc">解鎖更高週邀請上限</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+      <div class="list-item" onclick="openStack('help')">
+        <div class="list-icon" style="background: rgba(255,255,255,0.08);">❓</div>
+        <div class="list-text"><div class="list-title">幫助中心</div><div class="list-desc">積分規則 / 分數池 / 返佣 FAQ</div></div>
+        <div class="list-arrow">›</div>
+      </div>
+    </div>
+    <div style="height: 40px;"></div>
+  </div>
+
+  <!-- ============ 积分中心 ============ -->
+  <div class="page stack-page" id="page-points-center">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">積分中心</div><div class="header-crumb">首頁 / 積分中心</div></div>
+      <div class="header-icon" onclick="openStack('help')">❓</div>
+      <div class="header-icon" onclick="openStack('inbox')">📬<span class="header-dot"></span></div>
+    </div>
+    <div class="win-notice" onclick="openModal('claimPrizeModal')">
+      <div class="win-notice-icon">🎉</div>
+      <div style="flex: 1;"><div class="win-notice-title">恭喜你獲獎了！</div><div class="win-notice-sub">上週週榜第 47 名 · 100 HKD 現金券等值權益</div></div>
+      <div style="color: #4ade80;">›</div>
+    </div>
+    <div class="pc-hero">
+      <div class="pc-user">
+        <div class="pc-user-avatar">CW</div>
+        <div class="pc-user-info"><div class="pc-user-name">Chris Wong</div><div class="pc-user-desc">本週已邀請 3/10 人 · 已簽到第 6 天</div></div>
+        <div class="pc-user-btn" onclick="openStack('profile')">資料 ›</div>
+      </div>
+      <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">🎯 三類積分賬戶</div>
+      <div class="pc-account-switcher" id="accSwitcher"></div>
+      <div class="pc-acc-detail" id="accDetail"></div>
+    </div>
+    <div class="pc-rank" onclick="openStack('leaderboard')">
+      <div class="pc-rank-head"><span style="font-size: 16px;">🏆</span><div class="pc-rank-title">你的實時排名</div><div class="pc-rank-tag">可獲獎</div></div>
+      <div class="pc-rank-row">
+        <div><div style="font-size: 10px; color: #888;">每週排行榜</div><div class="pc-rank-num gold-text">#47</div></div>
+        <div style="flex: 1; text-align: right;"><div class="pc-rank-info-top">預計週獎金</div><div class="pc-rank-info-bot">100 HKD</div></div>
+      </div>
+      <div class="pc-rank-tip">💡 再賺 <b style="color: #F8DC7A;">680 分</b> 升至第 11-50 名（300 HKD）→ 點擊查看完整榜單</div>
+    </div>
+    <div class="pc-countdown-box clickable" onclick="openModal('payoutScheduleModal')">
+      <span style="font-size: 14px;">⏰</span>
+      <div class="pc-countdown-label">週榜結算倒計時<small> · 點擊查看發獎流程</small></div>
+      <div class="pc-countdown" id="countdown"><span class="pc-count-unit">02</span><span class="pc-count-unit">14</span><span class="pc-count-unit">28</span><span class="pc-count-unit">53</span></div>
+    </div>
+    <div class="pools-card">
+      <div class="pools-head">
+        <div class="pools-title">💠 四大分數池進度</div>
+        <div class="pools-switcher" id="poolSwitcher"></div>
+      </div>
+      <div id="poolList"></div>
+      <div class="pools-note">📌 四大池<b>獨立計算封頂</b>，互不影響。超出封頂部分<b>僅計入歷史累計積分</b>（可用於兌換）。</div>
+    </div>
+    <div class="pc-entries">
+      <div class="pc-entry" onclick="openStack('task-center')"><div class="pc-entry-icon">📝</div><div class="pc-entry-label">做任務</div></div>
+      <div class="pc-entry" onclick="openStack('invite')"><div class="pc-entry-icon">👥</div><div class="pc-entry-label">邀請好友</div><div class="pc-entry-plus">+1200</div></div>
+      <div class="pc-entry" onclick="openStack('rewards')"><div class="pc-entry-icon">🎁</div><div class="pc-entry-label">獎品專區</div></div>
+      <div class="pc-entry" onclick="openStack('leaderboard')"><div class="pc-entry-icon">🏆</div><div class="pc-entry-label">排行榜</div></div>
+    </div>
+    <div class="week-rotate">
+      <div class="wr-head"><span style="font-size: 16px;">🔄</span><div class="wr-title">本週任務輪換組合</div><div class="wr-week-tag">第 2 週</div></div>
+      <div class="wr-desc">每月 4 週任務組合不同，本週主打「互動+分享」類任務</div>
+      <div class="wr-grid" id="wrGrid"></div>
+      <div class="wr-list" id="wrList"></div>
+      <div class="wr-total" id="wrTotal"></div>
+    </div>
+    <div class="section-head">
+      <div class="section-head-title">🎁 本期獎品檔次</div>
+      <div class="section-head-more clickable" onclick="openStack('rewards')">查看全部 ›</div>
+    </div>
+    <div class="prize-scroll">
+      <div class="prize-card gold" onclick="openStack('rewards')"><div class="prize-badge">👑 月榜第1名</div><div class="prize-icon">🏆</div><div class="prize-title">現金券等值權益</div><div class="prize-amount gold-text">5,000 HKD</div><div class="prize-unit">月榜最高獎</div></div>
+      <div class="prize-card gold" onclick="openStack('rewards')"><div class="prize-badge">🥇 週榜第1名</div><div class="prize-icon">🎖️</div><div class="prize-title">現金券等值權益</div><div class="prize-amount gold-text">1,500 HKD</div><div class="prize-unit">週榜最高獎</div></div>
+      <div class="prize-card red" onclick="openStack('rewards')"><div class="prize-badge red-tag">🎁 覆蓋最廣</div><div class="prize-icon">💎</div><div class="prize-title">週榜 51-100名</div><div class="prize-amount" style="color: #fca5a5;">50 HKD × 50</div><div class="prize-unit">最易獲得</div></div>
+    </div>
+    <div class="section-head">
+      <div class="section-head-title">⚡ 今日推薦任務</div>
+      <div class="section-head-more clickable" onclick="openStack('task-center')">全部 ›</div>
+    </div>
+    <div class="task-list" id="recommendTasks"></div>
+    <div class="section-head">
+      <div class="section-head-title">🎊 上期獲獎名單</div>
+      <div class="section-head-more clickable" onclick="openStack('win-history')">全部 ›</div>
+    </div>
+    <div class="winners-list" id="winnersTop3"></div>
+    <div class="winners-summary clickable" onclick="openStack('win-history')">上週共 <b>100 位</b>用戶獲獎 · 累計派發 <b>11,700 HKD</b> · 點擊查看完整榜單</div>
+  </div>
+
+  <!-- ============ 邀请 ============ -->
+  <div class="page stack-page" id="page-invite">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">邀請好友</div><div class="header-crumb">積分中心 / 邀請好友</div></div>
+      <div class="header-icon" onclick="openStack('help')">❓</div>
+    </div>
+    <div class="iv-hero">
+      <div class="iv-hero-label">單人邀請最高可得</div>
+      <div class="iv-hero-num gold-text">1,200</div>
+      <div class="iv-hero-sub">基礎積分（NA01-NA05 全部完成）</div>
+      <div class="iv-hero-plus" onclick="openModal('commissionRulesModal')">+ 終身 10% 返佣（永久）</div>
+    </div>
+    <div class="comm-tracker">
+      <div class="ct-head">
+        <div class="ct-title">💰 返佣實時追蹤<span class="ct-live-dot"></span></div>
+        <div class="ct-more" onclick="openStack('commission-detail')">完整明細 ›</div>
+      </div>
+      <div class="ct-summary">
+        <div class="ct-summary-cell" onclick="openStack('commission-detail')"><div class="ct-sc-label">今日返佣</div><div class="ct-sc-num today">+80</div><div class="ct-sc-sub">3 位貢獻</div></div>
+        <div class="ct-summary-cell" onclick="openStack('commission-detail')"><div class="ct-sc-label">本週返佣</div><div class="ct-sc-num week">340</div><div class="ct-sc-sub">/ 6,000 週封頂</div></div>
+        <div class="ct-summary-cell" onclick="openStack('commission-detail')"><div class="ct-sc-label">歷史累計</div><div class="ct-sc-num total">1,240</div><div class="ct-sc-sub">不設上限</div></div>
+      </div>
+      <div class="ct-caps">
+        <div class="ct-cap-item clickable" onclick="openModal('commissionRulesModal')"><span>週封頂</span><div class="ct-cap-bar"><div class="ct-cap-fill" style="width: 5.7%;"></div></div><span class="ct-cap-num">340/6K</span></div>
+        <div class="ct-cap-item clickable" onclick="openModal('commissionRulesModal')"><span>月封頂</span><div class="ct-cap-bar"><div class="ct-cap-fill" style="width: 6.2%;"></div></div><span class="ct-cap-num">1,240/20K</span></div>
+      </div>
+      <div class="ct-list-head">
+        <span>📋 我的受邀人（5人）</span>
+        <div class="ct-list-tabs" id="inviteeTabs"></div>
+      </div>
+      <div id="inviteeList"></div>
+    </div>
+    <div class="iv-progress">
+      <div class="iv-progress-head"><div class="iv-progress-title">📅 本週邀請進度</div><div class="iv-progress-more" onclick="openModal('kolModal')">升級KOL ›</div></div>
+      <div class="iv-progress-bar"><div class="iv-progress-fill"></div></div>
+      <div class="iv-progress-txt">本週已邀請 <b style="color: #F8DC7A;">3</b> / 10 人</div>
+      <div class="iv-progress-tip">💡 每人每週最多邀請 10 人（KOC/KOL 可解鎖更高上限）· 超出積分僅入歷史累計</div>
+    </div>
+    <div class="iv-stages" id="ivStages"></div>
+    <div class="iv-share-title">📲 分享我的邀請連結</div>
+    <div class="iv-link">
+      <div class="iv-link-text">neuralfin.com/i/CW20250318</div>
+      <div class="iv-link-btn" onclick="copyLink()">複製</div>
+    </div>
+    <div class="iv-share">
+      <div class="iv-share-btn" onclick="shareSocial('微信')"><div class="iv-share-icon">💬</div><div class="iv-share-label">微信</div></div>
+      <div class="iv-share-btn" onclick="shareSocial('WhatsApp')"><div class="iv-share-icon">📱</div><div class="iv-share-label">WhatsApp</div></div>
+      <div class="iv-share-btn" onclick="shareSocial('Instagram')"><div class="iv-share-icon">📷</div><div class="iv-share-label">Instagram</div></div>
+      <div class="iv-share-btn" onclick="openModal('qrModal')"><div class="iv-share-icon">📋</div><div class="iv-share-label">二維碼</div></div>
+    </div>
+    <div style="margin: 0 16px 40px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px;">
+      <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">🛡️ 返佣詳細規則</div>
+      <div style="font-size: 11px; color: #aaa; line-height: 1.9;">
+        • 返佣比例 <b style="color: #F8DC7A;">10%</b> · 僅<b style="color: #F8DC7A;">單級返佣</b>，不支持多層級<br>
+        • 單受邀人單日上限 <b style="color: #F8DC7A;">150 分</b>（防刷分）<br>
+        • 超週封頂（6,000）只入月榜和歷史榜<br>
+        • 超月封頂（20,000）只入歷史累計積分<br>
+        • 邀請池（SA/NA）和返佣池本身<b style="color: #F8DC7A;">不參與返佣</b>（防二級刷分）<br>
+        • 歷史累計積分<b style="color: #4ade80;">不設上限</b>，全量累加<br>
+        • 邀請關係<b style="color: #4ade80;">永久有效</b>，終身做任務終身返佣
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 受邀人详情 ============ -->
+  <div class="page stack-page" id="page-invitee-detail">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title" id="inviteeHeaderTitle">受邀人詳情</div><div class="header-crumb" id="inviteeHeaderCrumb">邀請好友 / 詳情</div></div>
+      <div class="header-icon" onclick="showToast('已發送站內信')">💬</div>
+    </div>
+    <div id="inviteeDetailBody"></div>
+  </div>
+
+  <!-- ============ 返佣明细 ============ -->
+  <div class="page stack-page" id="page-commission-detail">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">返佣明細</div><div class="header-crumb">邀請好友 / 返佣明細</div></div>
+      <div class="header-icon" onclick="showToast('報表已匯出至下載')">📤</div>
+    </div>
+    <div class="invitee-hero" style="background: linear-gradient(135deg, rgba(251,146,60,0.15), rgba(20,20,20,1)); border-color: rgba(251,146,60,0.3);">
+      <div style="font-size: 11px; color: #aaa; margin-bottom: 4px;">💰 歷史累計返佣</div>
+      <div style="font-size: 36px; font-weight: 900; color: #F8DC7A; line-height: 1; margin-bottom: 8px;">1,240</div>
+      <div style="font-size: 11px; color: #888;">全部計入歷史累計 · 不設上限</div>
+      <div class="invitee-hero-stats">
+        <div class="ih-stat" onclick="filterCommission('today')"><div class="ih-stat-label">今日</div><div class="ih-stat-num" style="color: #4ade80;">+80</div></div>
+        <div class="ih-stat" onclick="filterCommission('week')"><div class="ih-stat-label">本週</div><div class="ih-stat-num" style="color: #60a5fa;">340</div></div>
+        <div class="ih-stat" onclick="filterCommission('month')"><div class="ih-stat-label">本月</div><div class="ih-stat-num" style="color: #fb923c;">1,240</div></div>
+      </div>
+    </div>
+    <div class="pd-filter" id="commFilter"></div>
+    <div id="commContent" style="padding-bottom: 40px;"></div>
+  </div>
+
+  <!-- ============ 任务中心 ============ -->
+  <div class="page stack-page" id="page-task-center">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">任務中心</div><div class="header-crumb">積分中心 / 任務中心</div></div>
+      <div class="header-icon" onclick="openStack('help')">❓</div>
+    </div>
+    <div class="tc-tabs" id="tcTabs"></div>
+    <div id="tcContent" style="padding-bottom: 40px;"></div>
+  </div>
+
+  <!-- ============ 排行榜 ============ -->
+  <div class="page stack-page" id="page-leaderboard">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">排行榜</div><div class="header-crumb">積分中心 / 排行榜</div></div>
+      <div class="header-icon" onclick="openStack('win-history')">📜</div>
+    </div>
+    <div class="lb-tabs" id="lbTabs"></div>
+    <div class="lb-countdown clickable" onclick="openModal('payoutScheduleModal')" id="lbCountdown">
+      <span style="color: #ccc;">📅 結算倒計時</span>
+      <span class="lb-countdown-time">2天 14:28:53</span>
+    </div>
+    <div id="lbContent" style="padding-bottom: 60px;"></div>
+  </div>
+
+  <!-- ============ 奖品 ============ -->
+  <div class="page stack-page" id="page-rewards">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">🎁 獎品專區</div><div class="header-crumb">積分中心 / 獎品專區</div></div>
+    </div>
+    <div class="rw-hero">
+      <div class="rw-hero-label">月度獎池總預算</div>
+      <div class="rw-hero-num">79,400 HKD</div>
+      <div class="rw-hero-sub">200 位用戶/月獲獎</div>
+      <div class="rw-hero-split">
+        <div class="rw-hero-item" onclick="showToast('週榜 × 4 週 · 每週 11,700 HKD · 共 46,800')"><div class="rw-hero-item-num">46,800</div><div class="rw-hero-item-label">週榜×4週 · 58.9%</div></div>
+        <div class="rw-hero-item" onclick="showToast('月榜 × 1 · 共 32,600 HKD')"><div class="rw-hero-item-num">32,600</div><div class="rw-hero-item-label">月榜×1 · 41.1%</div></div>
+      </div>
+    </div>
+    <div class="rw-cat-title">💳 可選兌換品類（點擊偏好）</div>
+    <div class="rw-cats" id="rwCats"></div>
+    <div class="rw-sec">
+      <div class="rw-sec-title"><span>📅 每週榜單獎品</span><span style="font-size: 10px; color: #888;">100 人獲獎</span></div>
+      <div class="rw-prize-row" onclick="filterToRank(1)"><div class="rw-prize-emoji">🥇</div><div class="rw-prize-name">第1名</div><div class="rw-prize-value">1,500 HKD</div></div>
+      <div class="rw-prize-row" onclick="filterToRank(2)"><div class="rw-prize-emoji">🥈</div><div class="rw-prize-name">第2名</div><div class="rw-prize-value">1,000 HKD</div></div>
+      <div class="rw-prize-row" onclick="filterToRank(3)"><div class="rw-prize-emoji">🥉</div><div class="rw-prize-name">第3名</div><div class="rw-prize-value">600 HKD</div></div>
+      <div class="rw-prize-row" onclick="filterToRank(7)"><div class="rw-prize-emoji">🎖️</div><div class="rw-prize-name">第 4-10 名（7人）</div><div class="rw-prize-value">300 × 7</div></div>
+      <div class="rw-prize-row" onclick="filterToRank(40)"><div class="rw-prize-emoji">🏅</div><div class="rw-prize-name">第 11-50 名（40人）</div><div class="rw-prize-value">100 × 40</div></div>
+      <div class="rw-prize-row" onclick="filterToRank(50)"><div class="rw-prize-emoji">🎫</div><div class="rw-prize-name">第 51-100 名（50人） <span class="rw-prize-tag">最易獲得</span></div><div class="rw-prize-value">50 × 50</div></div>
+      <div style="margin-top: 10px; padding: 8px; text-align: center; background: rgba(212,175,55,0.1); border-radius: 8px; font-size: 12px;">每週成本合計 <b class="gold-text">11,700 HKD</b></div>
+    </div>
+    <div class="rw-sec">
+      <div class="rw-sec-title"><span>🗓️ 每月榜單獎品</span><span style="font-size: 10px; color: #888;">100 人獲獎</span></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">👑</div><div class="rw-prize-name">第1名</div><div class="rw-prize-value">5,000 HKD</div></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">🥈</div><div class="rw-prize-name">第2名</div><div class="rw-prize-value">3,000 HKD</div></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">🥉</div><div class="rw-prize-name">第3名</div><div class="rw-prize-value">2,000 HKD</div></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">🎖️</div><div class="rw-prize-name">第 4-10 名（7人）</div><div class="rw-prize-value">800 × 7</div></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">🏅</div><div class="rw-prize-name">第 11-50 名（40人）</div><div class="rw-prize-value">300 × 40</div></div>
+      <div class="rw-prize-row"><div class="rw-prize-emoji">🎫</div><div class="rw-prize-name">第 51-100 名（50人）</div><div class="rw-prize-value">100 × 50</div></div>
+      <div style="margin-top: 10px; padding: 8px; text-align: center; background: rgba(212,175,55,0.1); border-radius: 8px; font-size: 12px;">每月成本合計 <b class="gold-text">32,600 HKD</b></div>
+    </div>
+    <div class="rw-sec" style="margin-bottom: 40px;">
+      <div class="rw-sec-title"><span>📮 獎品發放流程</span></div>
+      <div style="font-size: 12px; color: #ccc; line-height: 1.9;">
+        <div><b style="color: #F8DC7A;">①</b> 週日 23:59 結算 · 週一風控審核</div>
+        <div><b style="color: #F8DC7A;">②</b> 次週二 10:00 HKT 公佈 + 發獎</div>
+        <div><b style="color: #F8DC7A;">③</b> 運營客服<b>3個工作日</b>內通過站內信/短信/郵件聯繫</div>
+        <div><b style="color: #F8DC7A;">④</b> 用戶<b>7個工作日</b>內回覆確認偏好品類</div>
+        <div><b style="color: #F8DC7A;">⑤</b> 電子卡密通過<b>郵件或短信</b>發放</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 积分明细 ============ -->
+  <div class="page stack-page" id="page-points-detail">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">積分明細</div><div class="header-crumb">個人中心 / 積分明細</div></div>
+      <div class="header-icon" onclick="openModal('pdSearchModal')">🔍</div>
+    </div>
+    <div class="pd-hero">
+      <div class="pd-hero-label">歷史累計積分</div>
+      <div class="pd-hero-num">24,860</div>
+      <div class="pd-hero-desc">包含來源任務、所屬池、是否封頂</div>
+    </div>
+    <div class="pd-filter" id="pdFilter"></div>
+    <div id="pdContent" style="padding-bottom: 40px;"></div>
+  </div>
+
+  <!-- ============ 任务详情 ============ -->
+  <div class="page stack-page" id="page-task-detail">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title" id="tdTitle">任務詳情</div><div class="header-crumb" id="tdCrumb">任務中心 / 任務詳情</div></div>
+      <div class="header-icon" onclick="shareSocial('任務')">📤</div>
+    </div>
+    <div id="tdContent" style="padding: 14px 16px 40px;"></div>
+  </div>
+
+  <!-- ============ 帮助 ============ -->
+  <div class="page stack-page" id="page-help">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">幫助中心</div><div class="header-crumb">積分中心 / 幫助中心</div></div>
+      <div class="header-icon" onclick="openModal('contactModal')">💬</div>
+    </div>
+    <div style="padding: 14px 0 40px;" id="helpList"></div>
+  </div>
+
+  <!-- ============ 收件箱 ============ -->
+  <div class="page stack-page" id="page-inbox">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">站內收件箱</div><div class="header-crumb">積分中心 / 收件箱</div></div>
+      <div class="header-icon" onclick="markAllRead()" style="font-size: 11px; color: #F8DC7A; width: auto; padding: 0 10px;">全部已讀</div>
+    </div>
+    <div style="padding: 14px 0 40px;" id="inboxList"></div>
+  </div>
+
+  <!-- ============ 积分商城 ============ -->
+  <div class="page stack-page" id="page-mall">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">🛍️ 積分商城</div><div class="header-crumb">個人中心 / 積分商城</div></div>
+    </div>
+    <div style="margin: 14px 16px; padding: 16px; background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.3); border-radius: 14px; display: flex; align-items: center; gap: 12px;">
+      <div style="flex: 1;"><div style="font-size: 11px; color: #aaa;">可用積分（歷史累計）</div><div style="font-size: 28px; font-weight: 900; color: #F8DC7A;" id="mallBalance">24,860</div></div>
+      <div style="font-size: 36px;">💎</div>
+    </div>
+    <div style="padding: 0 16px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;" id="mallFilter"></div>
+    <div id="mallContent" style="padding: 0 0 40px;"></div>
+  </div>
+
+  <!-- ============ 历届获奖 ============ -->
+  <div class="page stack-page" id="page-win-history">
+    <div class="page-header">
+      <div class="back-btn" onclick="closeStack()">‹</div>
+      <div style="flex: 1;"><div class="header-title">🏆 歷屆獲獎</div><div class="header-crumb">公示榜單</div></div>
+    </div>
+    <div style="margin: 14px 16px; padding: 12px; background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.2); border-radius: 10px; font-size: 11px; color: #93c5fd; line-height: 1.5;">
+      📌 公開歷屆獲獎名單以建立公信力 · 點擊任一獲獎者查看其積分構成
+    </div>
+    <div style="padding: 0 16px 12px; display: flex; gap: 6px;" id="whFilter"></div>
+    <div id="whContent" style="padding: 0 0 40px;"></div>
+  </div>
+
+  <!-- ============ Modals ============ -->
+  <div class="modal-overlay" id="postModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">✍️ 發布內容</div>
+      <div class="modal-sub">選擇類型，開始賺積分</div>
+      <div class="modal-list-item" onclick="closeModal(); openStack('task-detail'); loadTaskDetail('C01')"><div style="font-size: 26px;">📝</div><div style="flex: 1;"><div style="font-weight: 700;">C01 發布觀點</div><div style="font-size: 11px; color: #888;">短內容 ≥ 50字 + 圖 · 日封頂 3 條</div></div><div style="color: #F8DC7A; font-weight: 700;">+50</div></div>
+      <div class="modal-list-item" onclick="closeModal(); openStack('task-detail'); loadTaskDetail('C02')"><div style="font-size: 26px;">📚</div><div style="flex: 1;"><div style="font-weight: 700;">C02 深度分析</div><div style="font-size: 11px; color: #888;">長文 ≥ 300字 · 日封頂 1 條</div></div><div style="color: #F8DC7A; font-weight: 700;">+200</div></div>
+      <div class="modal-list-item" onclick="closeModal(); openStack('task-detail'); loadTaskDetail('C04')"><div style="font-size: 26px;">🎥</div><div style="flex: 1;"><div style="font-weight: 700;">C04 視頻內容</div><div style="font-size: 11px; color: #888;">≥ 60秒原創視頻 · 日封頂 3 條</div></div><div style="color: #F8DC7A; font-weight: 700;">+50</div></div>
+      <div class="modal-list-item" onclick="closeModal(); openStack('task-detail'); loadTaskDetail('C05')"><div style="font-size: 26px;">📡</div><div style="flex: 1;"><div style="font-weight: 700;">C05 直播</div><div style="font-size: 11px; color: #888;">≥ 30分鐘直播 · 日封頂 1 場</div></div><div style="color: #F8DC7A; font-weight: 700;">+300</div></div>
+      <div class="modal-btn secondary" onclick="closeModal()">取消</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="searchModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🔍 搜索</div>
+      <input id="searchInput" oninput="renderSearchResults(this.value)" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 14px;" placeholder="搜索任務、文章、用戶...">
+      <div id="searchResults"></div>
+      <div class="modal-btn secondary" onclick="closeModal()">取消</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="aiModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #60a5fa, #a78bfa); border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 28px;">🤖</div>
+        <div class="modal-title">Neural AI 助手</div>
+        <div class="modal-sub">你的 24/7 智能投研夥伴</div>
+      </div>
+      <div style="margin-bottom: 14px; padding: 12px; background: rgba(96,165,250,0.08); border-radius: 10px; font-size: 12px; color: #ccc; line-height: 1.6;" id="aiResponse">
+        💡 你好 Chris！我注意到你今日進度：<br>• 社交池剩 290 分可入週榜<br>• 還需 680 分升至第 11-50 名（300 HKD）<br>• 推薦完成 C14 高質量評論 ×3 即可達成
+      </div>
+      <div class="modal-btn primary" onclick="aiSuggest('衝榜')">🎯 給我衝榜建議</div>
+      <div class="modal-btn secondary" onclick="aiSuggest('市場')">📊 今日市場解讀</div>
+      <div class="modal-btn secondary" onclick="aiSuggest('邀請')">👥 如何提升邀請收益</div>
+      <div class="modal-btn secondary" onclick="closeModal()">關閉</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">⚙️ 設置</div>
+      <div class="modal-sub">個人偏好與帳戶管理</div>
+      <div class="modal-list-item" onclick="toggleSetting('通知')"><div style="font-size: 20px;">🔔</div><div style="flex: 1;">通知設置</div><div id="setNotice" style="color: #4ade80; font-size: 12px;">已開啟</div></div>
+      <div class="modal-list-item" onclick="toggleSetting('隱私')"><div style="font-size: 20px;">🔒</div><div style="flex: 1;">隱私設置</div><div id="setPrivacy" style="color: #4ade80; font-size: 12px;">已開啟</div></div>
+      <div class="modal-list-item" onclick="cycleSetting('語言')"><div style="font-size: 20px;">🌏</div><div style="flex: 1;">語言</div><div id="setLang" style="color: #888; font-size: 12px;">繁體中文 ›</div></div>
+      <div class="modal-list-item" onclick="cycleSetting('貨幣')"><div style="font-size: 20px;">💰</div><div style="flex: 1;">貨幣</div><div id="setCurrency" style="color: #888; font-size: 12px;">HKD ›</div></div>
+      <div class="modal-btn danger" onclick="closeModal(); showToast('⚠️ 註銷後 30 天內不得重新註冊')">註銷帳號</div>
+      <div class="modal-btn secondary" onclick="closeModal()">關閉</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editProfileModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">👤 編輯資料</div>
+      <div class="modal-sub">修改暱稱和頭像</div>
+      <div style="text-align: center; margin: 14px 0;">
+        <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #D4AF37, #8B6914); color: #000; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900;">CW</div>
+        <div style="font-size: 11px; color: #F8DC7A; margin-top: 8px; cursor: pointer;" onclick="showToast('點擊上傳新頭像')">更換頭像</div>
+      </div>
+      <input id="nameInput" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 10px;" value="Chris Wong" placeholder="暱稱">
+      <input id="bioInput" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 14px;" placeholder="個人簡介">
+      <div class="modal-btn primary" onclick="saveProfile()">保存</div>
+      <div class="modal-btn secondary" onclick="closeModal()">取消</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="claimPrizeModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="font-size: 48px;">🎉</div>
+        <div class="modal-title">恭喜獲獎！</div>
+        <div class="modal-sub">週榜第 47 名 · 100 HKD 現金券等值權益</div>
+      </div>
+      <div style="font-size: 12px; color: #aaa; margin-bottom: 10px;">選擇你的偏好品類：</div>
+      <div class="modal-list-item" onclick="claimPrize('Apple Gift Card')"><div style="font-size: 24px;">🍎</div><div style="flex: 1;"><div style="font-weight: 700;">Apple Gift Card</div><div style="font-size: 10px; color: #888;">最熱門</div></div><div style="color: #F8DC7A; font-weight: 700;">100 HKD</div></div>
+      <div class="modal-list-item" onclick="claimPrize('京東卡')"><div style="font-size: 24px;">🛒</div><div style="flex: 1;"><div style="font-weight: 700;">京東卡</div></div><div style="color: #F8DC7A; font-weight: 700;">100 HKD</div></div>
+      <div class="modal-list-item" onclick="claimPrize('Starbucks E-Card')"><div style="font-size: 24px;">☕</div><div style="flex: 1;"><div style="font-weight: 700;">Starbucks E-Card</div></div><div style="color: #F8DC7A; font-weight: 700;">100 HKD</div></div>
+      <div class="modal-list-item" onclick="claimPrize('天貓超市卡')"><div style="font-size: 24px;">🏪</div><div style="flex: 1;"><div style="font-weight: 700;">天貓超市卡</div></div><div style="color: #F8DC7A; font-weight: 700;">100 HKD</div></div>
+      <div class="modal-btn secondary" onclick="closeModal()">稍後再選（7 天內）</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="kolModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="font-size: 44px;">⭐</div>
+        <div class="modal-title">KOL 認證</div>
+        <div class="modal-sub">解鎖更高邀請上限和專屬權益</div>
+      </div>
+      <div style="font-size: 12px; color: #ccc; line-height: 1.9; margin-bottom: 16px; padding: 12px; background: rgba(212,175,55,0.08); border-radius: 10px;">
+        <div>✓ 週邀請上限 <b style="color: #F8DC7A;">50 人</b>（普通 10 人）</div>
+        <div>✓ 季度榜單優先入選</div>
+        <div>✓ KOL 專屬客服通道</div>
+        <div>✓ 獨家變現機會</div>
+      </div>
+      <input style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 10px;" placeholder="你的自媒體帳號（IG/FB/小紅書）">
+      <input style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 14px;" placeholder="粉絲數（如 50000）">
+      <div class="modal-btn primary" onclick="closeModal(); showToast('✅ 申請已提交 · 3-5 個工作日內審核')">提交申請</div>
+      <div class="modal-btn secondary" onclick="closeModal()">取消</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="qrModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">📋 我的邀請二維碼</div>
+      <div class="modal-sub">保存或分享給好友</div>
+      <div style="width: 200px; height: 200px; background: #fff; margin: 20px auto; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
+        <div style="text-align: center; color: #000; font-family: monospace;">
+          <div style="font-size: 30px; line-height: 1;">▣▢▣<br>▢▣▢<br>▣▢▣</div>
+          <div style="font-size: 11px; margin-top: 8px; font-weight: 700;">CW20250318</div>
+        </div>
+      </div>
+      <div style="text-align: center; font-size: 11px; color: #888; margin-bottom: 14px;">neuralfin.com/i/CW20250318</div>
+      <div class="modal-btn primary" onclick="closeModal(); showToast('✅ 已保存至相冊')">保存圖片</div>
+      <div class="modal-btn secondary" onclick="closeModal()">關閉</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="badgesModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🏅 我的徽章</div>
+      <div class="modal-sub">已獲得 3 / 12 枚</div>
+      <div id="badgesGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0;"></div>
+      <div class="modal-btn secondary" onclick="closeModal()">關閉</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="payoutScheduleModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">📅 結算與發獎流程</div>
+      <div class="modal-sub">透明、可預期的兌現節奏</div>
+      <div style="font-size: 12px; color: #ccc; line-height: 2; padding: 14px; background: rgba(212,175,55,0.06); border-radius: 10px; margin-bottom: 14px;">
+        <div><b style="color: #F8DC7A;">週日 23:59 HKT</b> · 週榜冷凍結算</div>
+        <div><b style="color: #F8DC7A;">週一 全天</b> · 風控審核（識別異常行為）</div>
+        <div><b style="color: #F8DC7A;">週二 10:00 HKT</b> · 公佈名單 + 發放卡密</div>
+        <div><b style="color: #F8DC7A;">3 工作日內</b> · 客服聯繫獲獎者</div>
+        <div><b style="color: #F8DC7A;">7 工作日內</b> · 確認偏好品類</div>
+      </div>
+      <div class="modal-btn primary" onclick="closeModal()">了解</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="commissionRulesModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">💰 返佣規則詳解</div>
+      <div class="modal-sub">透明規則 · 防止刷分</div>
+      <div style="font-size: 12px; color: #ccc; line-height: 2; padding: 14px; background: rgba(168,85,247,0.06); border-radius: 10px; margin-bottom: 14px;">
+        <div>• 比例：<b style="color: #F8DC7A;">10%</b> 單級返佣</div>
+        <div>• 受邀人單日上限：<b style="color: #F8DC7A;">150 分</b></div>
+        <div>• 週封頂：<b style="color: #F8DC7A;">6,000 分</b></div>
+        <div>• 月封頂：<b style="color: #F8DC7A;">20,000 分</b></div>
+        <div>• 邀請池/返佣池<b style="color: #F8DC7A;">不參與返佣</b></div>
+        <div>• 歷史累計<b style="color: #4ade80;">不設上限</b></div>
+        <div>• 邀請關係<b style="color: #4ade80;">永久有效</b></div>
+      </div>
+      <div class="modal-btn primary" onclick="closeModal()">了解</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="contactModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">💬 聯繫客服</div>
+      <div class="modal-sub">9:00 - 21:00 HKT 在線</div>
+      <div class="modal-btn primary" onclick="closeModal(); showToast('🟢 正在連接在線客服...')">在線聊天</div>
+      <div class="modal-btn secondary" onclick="closeModal(); showToast('📧 已開啟郵件 support@neuralfin.com')">郵件支持</div>
+      <div class="modal-btn secondary" onclick="closeModal()">取消</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pdSearchModal" onclick="closeModalBg(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🔍 篩選明細</div>
+      <input id="pdSearchInput" oninput="filterPdSearch(this.value)" placeholder="輸入任務名稱或 ID（如 D01）" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-size: 14px; margin-bottom: 14px;">
+      <div class="modal-btn primary" onclick="closeModal()">確定</div>
+    </div>
+  </div>
+  
+  <!-- 底部导航 -->
+  <div class="bottom-nav">
+    <div class="nav-item active" data-tab="home" onclick="switchTab('home')"><span class="nav-icon">🏠</span><span>首頁</span></div>
+    <div class="nav-item" data-tab="market" onclick="switchTab('market')"><span class="nav-icon">📈</span><span>行情</span></div>
+    <div class="nav-plus" onclick="openModal('postModal')">+</div>
+    <div class="nav-item" data-tab="watchlist" onclick="switchTab('watchlist')"><span class="nav-icon">⭐</span><span>自選</span></div>
+    <div class="nav-item" data-tab="trade" onclick="switchTab('trade')"><span class="nav-icon">🔄</span><span>交易</span></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ========== 数据层 ========== */
+
+// 首页内容
+const homeTabsData = ['關注','精選','發現','資訊'];
+const homeCats = ['全部','數位資產','投資機會','每日準則','市場洞察','社區熱榜'];
+const allFeeds = {
+  '發現': [
+    {cat:'市場洞察', t:'债主也烦恼：欧洲老赖集体违约，美国傻眼了', e:'🌍♟️', g:'1e3a5f,8B6914', a:'大國博弈', av:'🌐', l:714},
+    {cat:'市場洞察', t:'How a $65 Billion Ponzi Scheme Fooled the World', e:'🎬', g:'2c3e50,4a5f7a', a:'C.F.A', av:'📊', l:815},
+    {cat:'每日準則', t:'投行风云（四）：伪造学历进投行，生日当天亏掉14万', e:'💼', g:'3a2d1a,5c3317', a:'洲際解說', av:'🌎', l:620},
+    {cat:'投資機會', t:'算力租赁：别只盯着芯片，谁先把景气变成利润？', e:'💻', g:'1a3a5c,2c5f8a', a:'快嘴李財鋒', av:'🎤', l:414},
+    {cat:'數位資產', t:'机器人跑半马，干掉人类世界纪录？', e:'🤖', g:'4a3a1a,7a5c2c', a:'神經白博弈', av:'🧠', l:892},
+    {cat:'市場洞察', t:'CEASEFIRE DEADLINE NEARS: US-IRAN Maritime', e:'⚓', g:'1f2937,374151', a:'Breaking News', av:'📰', l:1200},
+    {cat:'數位資產', t:'比特币ETF资金净流入连续7日 · 鲸鱼地址异动', e:'₿', g:'3a2a0a,6b4a1a', a:'Crypto Lab', av:'🔗', l:567},
+    {cat:'投資機會', t:'港股科技股低位反弹 · 这3家估值见底', e:'📈', g:'0a3a2a,1a6b4a', a:'港股圈', av:'🇭🇰', l:432}
+  ],
+  '關注': [
+    {cat:'每日準則', t:'我關注的「Trader_K」最新觀點：港股黃金窗口期', e:'⭐', g:'4a1a3a,7a2c5c', a:'Trader_K', av:'👑', l:285},
+    {cat:'數位資產', t:'你關注的 Alpha_H 發布了視頻：以太坊技術面分析', e:'🔥', g:'3a1a4a,5c2c7a', a:'Alpha_H', av:'🎯', l:198}
+  ],
+  '精選': [
+    {cat:'市場洞察', t:'【編輯精選】聯儲局決議深度復盤 · 5000字長文', e:'🏆', g:'2a2a4a,4a4a7a', a:'NeuralFin', av:'🏅', l:1850},
+    {cat:'投資機會', t:'【精選】2026 H1 港美股機會地圖', e:'🗺️', g:'2a4a2a,4a7a4a', a:'研究院', av:'🔬', l:1234},
+    {cat:'每日準則', t:'【精選】巴菲特致股東信完整解讀', e:'📖', g:'4a2a2a,7a4a4a', a:'價值派', av:'💼', l:967}
+  ],
+  '資訊': [
+    {cat:'市場洞察', t:'【快訊】美聯儲維持利率不變 · 鴿派表態', e:'🗞️', g:'1a1a1a,3a3a3a', a:'快訊', av:'⚡', l:823},
+    {cat:'市場洞察', t:'【快訊】中概股集體大漲 · 拼多多漲7%', e:'📰', g:'2a1a1a,4a3a3a', a:'快訊', av:'⚡', l:611},
+    {cat:'數位資產', t:'【快訊】SEC 批准新一輪比特幣 ETF', e:'⚡', g:'1a2a1a,3a4a3a', a:'快訊', av:'⚡', l:1456}
+  ]
+};
+
+// 行情数据
+const marketTabsData = ['港股','美股','加密貨幣','ETF','期權'];
+const marketData = {
+  '港股': [
+    {code:'00700.HK', name:'騰訊控股', price:'412.40', change:'+2.34%', up:true},
+    {code:'09988.HK', name:'阿里巴巴', price:'128.50', change:'+1.89%', up:true},
+    {code:'00388.HK', name:'香港交易所', price:'310.20', change:'-0.45%', up:false},
+    {code:'01024.HK', name:'快手-W', price:'62.80', change:'+3.21%', up:true},
+    {code:'03690.HK', name:'美團-W', price:'168.40', change:'-1.20%', up:false},
+    {code:'09618.HK', name:'京東集團', price:'140.20', change:'+0.85%', up:true}
+  ],
+  '美股': [
+    {code:'AAPL', name:'蘋果', price:'215.80', change:'+1.45%', up:true},
+    {code:'TSLA', name:'特斯拉', price:'342.50', change:'-2.31%', up:false},
+    {code:'NVDA', name:'英偉達', price:'138.20', change:'+4.12%', up:true},
+    {code:'MSFT', name:'微軟', price:'418.30', change:'+0.92%', up:true},
+    {code:'GOOGL', name:'谷歌', price:'182.40', change:'+1.78%', up:true}
+  ],
+  '加密貨幣': [
+    {code:'BTC/USD', name:'比特幣', price:'72,450', change:'+3.45%', up:true},
+    {code:'ETH/USD', name:'以太坊', price:'3,820', change:'+2.18%', up:true},
+    {code:'SOL/USD', name:'Solana', price:'185.40', change:'+5.67%', up:true},
+    {code:'BNB/USD', name:'幣安幣', price:'612.30', change:'-0.83%', up:false}
+  ],
+  'ETF': [
+    {code:'2800.HK', name:'盈富基金', price:'21.45', change:'+1.12%', up:true},
+    {code:'3033.HK', name:'恒生科技ETF', price:'4.82', change:'+2.34%', up:true},
+    {code:'SPY', name:'標普500 ETF', price:'528.40', change:'+0.78%', up:true}
+  ],
+  '期權': [
+    {code:'TSLA C350', name:'TSLA 350看漲', price:'2.45', change:'+18.45%', up:true},
+    {code:'NVDA P130', name:'NVDA 130看跌', price:'1.32', change:'-12.50%', up:false}
+  ]
+};
+
+// 自选数据
+const watchlistData = [
+  {code:'00700.HK', name:'騰訊控股', price:'412.40', change:'+2.34%', up:true, vol:'9.8B'},
+  {code:'AAPL', name:'蘋果', price:'215.80', change:'+1.45%', up:true, vol:'58.2M'},
+  {code:'BTC/USD', name:'比特幣', price:'72,450', change:'+3.45%', up:true, vol:'42.5B'},
+  {code:'NVDA', name:'英偉達', price:'138.20', change:'+4.12%', up:true, vol:'234M'},
+  {code:'09988.HK', name:'阿里巴巴', price:'128.50', change:'+1.89%', up:true, vol:'2.4B'}
+];
+
+// 三账户
+let currentAcc = 'week';
+const accData = {
+  history: { num: '24,860', detail: '✨ <b>歷史累計</b>永久保留，可用於兌換積分商城（已收錄全部任務 + 超封頂部分）', tag: '永久 · 可兌換' },
+  week: { num: '3,420', detail: '⏰ <b>本週積分</b>用於週榜排名，<b>週一 00:00 HKT 清零</b>。當前週榜排名 #47，預計獎金 100 HKD', tag: '週一清零' },
+  month: { num: '8,750', detail: '📅 <b>本月積分</b>用於月榜排名，<b>每月 1 日 00:00 清零</b>。當前月榜排名 #82', tag: '1日清零' }
+};
+
+// 分数池
+const poolData = {
+  week: [
+    { name: '🎨 內容池', tasks: 'C01-C22', cur: 2340, cap: 7000, cls: 'c', tip: '還可獲得 4,660 分入本週榜', act: 'task' },
+    { name: '👥 社交池', tasks: 'D01-D09', cur: 1210, cap: 1500, cls: 'd', warn: '⚠️ 即將封頂 · 僅剩 290 分可計入週榜', act: 'task' },
+    { name: '📢 獲客池', tasks: 'NA01-NA05', cur: 150, cap: 8000, cls: 'n', tip: '💎 邀請1位用戶最高可得 1,200 分 · 點擊去邀請', act: 'invite' },
+    { name: '💰 返佣池', tasks: 'Commission 10%', cur: 80, cap: 6000, cls: 'r', tip: '📊 點擊查看誰貢獻了返佣', act: 'commission' }
+  ],
+  month: [
+    { name: '🎨 內容池', tasks: 'C01-C22', cur: 6850, cap: 25000, cls: 'c', tip: '月封頂空間充足', act: 'task' },
+    { name: '👥 社交池', tasks: 'D01-D09', cur: 3420, cap: 6000, cls: 'd', tip: '月度進度健康', act: 'task' },
+    { name: '📢 獲客池', tasks: 'NA01-NA05', cur: 450, cap: 25000, cls: 'n', tip: '💎 月榜最高可累計 25,000 分', act: 'invite' },
+    { name: '💰 返佣池', tasks: 'Commission 10%', cur: 230, cap: 20000, cls: 'r', tip: '月度返佣空間 19,770 分', act: 'commission' }
+  ]
+};
+
+// 每周轮换任务
+const weekTasks = [
+  { name:'第1週·輕度', list: [{id:'D01',n:'每日簽到（永久）',p:'+20 ×1'},{id:'D02',n:'每日閱讀5篇',p:'+30 ×1'},{id:'D03',n:'每日互動≥10次',p:'+40 ×1'},{id:'C13',n:'收藏優質內容5條',p:'+15 ×1'},{id:'C17',n:'關注創作者',p:'+20 ×5'}], daily: 205, weekly: 1435 },
+  { name:'第2週·互動', list: [{id:'D01',n:'每日簽到（永久）',p:'+20 ×1'},{id:'D04',n:'每日刷視頻≥15分鐘',p:'+50 ×1'},{id:'C14',n:'高質量評論（≥30字）',p:'+30 ×5'},{id:'C18',n:'互關',p:'+30 ×5'},{id:'C16',n:'分享到站外',p:'+30 ×5'}], daily: 520, weekly: 3640 },
+  { name:'第3週·創作', list: [{id:'D01',n:'每日簽到（永久）',p:'+20 ×1'},{id:'C01',n:'發布觀點（短內容）',p:'+50 ×3'},{id:'D03',n:'每日互動≥10次',p:'+40 ×1'},{id:'C14',n:'高質量評論（≥30字）',p:'+30 ×5'},{id:'D02',n:'每日閱讀5篇',p:'+30 ×1'}], daily: 390, weekly: 2730 },
+  { name:'第4週·深度', list: [{id:'D01',n:'每日簽到（永久）',p:'+20 ×1'},{id:'C02',n:'深度分析（≥300字）',p:'+200 ×1'},{id:'C04',n:'視頻內容（≥60秒）',p:'+50 ×3'},{id:'D03',n:'每日互動≥10次',p:'+40 ×1'},{id:'D04',n:'每日刷視頻≥15分鐘',p:'+50 ×1'}], daily: 460, weekly: 3220 }
+];
+let currentWeek = 1;
+
+// 任务中心数据
+const tcTabsData = [
+  {id:'daily', name:'📅 每日'},
+  {id:'content', name:'🎨 內容'},
+  {id:'social', name:'👥 社交'},
+  {id:'na', name:'📢 獲客'},
+  {id:'ms', name:'🏅 里程碑'}
+];
+
+const tasksByCategory = {
+  daily: {
+    header: { icon:'📅', title:'每日任務（社交池 D01-D05）', summary: '社交池本週已獲 <b>1,210 / 1,500 分</b>，還可累計 <b>290 分</b> 入週榜，超出部分僅入歷史累計' },
+    items: [
+      { id:'D01', name:'每日簽到', icon:'✅', iconBg:'rgba(34,197,94,0.15)', desc:'進入APP完成簽到 · 日限1次 · 永久任務', status:'done', statusTag:'done-tag', statusText:'已完成', reward:'+20', cur:1, max:1, action:'view' },
+      { id:'D02', name:'每日閱讀', icon:'📖', iconBg:'rgba(96,165,250,0.15)', desc:'閱讀≥5篇內容，每篇≥30秒', reward:'+30', cur:3, max:5, action:'go-home' },
+      { id:'D03', name:'每日互動', icon:'💬', iconBg:'rgba(168,85,247,0.15)', desc:'點讚/評論/轉發合計≥10次', reward:'+40', cur:4, max:10, action:'go-home' },
+      { id:'D04', name:'每日刷視頻', icon:'📺', iconBg:'rgba(251,146,60,0.15)', desc:'視頻觀看累計時長≥15分鐘', reward:'+50', cur:8, max:15, unit:'min', action:'go-home' },
+      { id:'D05', name:'全勤加成', icon:'🌟', iconBg:'rgba(212,175,55,0.15)', desc:'當日 D01-D04 全部完成 · 額外獎勵', statusTag:'lock-tag', statusText:'未解鎖', reward:'+30', action:'locked' }
+    ],
+    extra: 'checkin'
+  },
+  content: {
+    header: { icon:'🎨', title:'內容創作任務（C01-C22）', summary: '內容池週封頂 <b>7,000 分</b> · 月封頂 <b>25,000 分</b> · 當前 <b>2,340/7,000</b>' },
+    items: [
+      { id:'C01', name:'發布觀點', icon:'📝', iconBg:'rgba(212,175,55,0.15)', desc:'短內容 ≥50字 + 圖 · 日封頂 3 條', reward:'+50', cur:1, max:3, action:'post' },
+      { id:'C02', name:'深度分析', icon:'📚', iconBg:'rgba(212,175,55,0.15)', desc:'長文 ≥300字 · 日封頂 1 條', reward:'+200', cur:0, max:1, action:'post' },
+      { id:'C04', name:'視頻內容', icon:'🎥', iconBg:'rgba(96,165,250,0.15)', desc:'≥60秒原創視頻 · 日封頂 3 條', reward:'+50', cur:0, max:3, action:'post' },
+      { id:'C05', name:'直播', icon:'📡', iconBg:'rgba(239,68,68,0.15)', desc:'≥30分鐘直播 · 日封頂 1 場', reward:'+300', cur:0, max:1, action:'post' },
+      { id:'C14', name:'高質量評論', icon:'💬', iconBg:'rgba(212,175,55,0.15)', desc:'評論≥30字 · 日封頂 5 條', statusTag:'rotate-tag', statusText:'本週輪換', reward:'+30', cur:2, max:5, action:'go-home' },
+      { id:'C16', name:'分享外鏈', icon:'🔗', iconBg:'rgba(96,165,250,0.15)', desc:'分享到 IG/FB/小紅書 · 日封頂 5 次', statusTag:'rotate-tag', statusText:'本週輪換', reward:'+30', cur:0, max:5, action:'share' },
+      { id:'C18', name:'互關', icon:'🤝', iconBg:'rgba(236,72,153,0.15)', desc:'與他人互相關注 · 日封頂 5 次', statusTag:'rotate-tag', statusText:'本週輪換', reward:'+30', cur:1, max:5, action:'go-home' }
+    ],
+    passive: [
+      { id:'C06-C09', name:'內容獲讚 Lv1-Lv4', icon:'💎', iconBg:'rgba(212,175,55,0.15)', desc:'10/50/200/1000讚 · 單條限1次', statusTag:'passive-tag', statusText:'被動', reward:'最高+3000' },
+      { id:'C10', name:'評論區活躍', icon:'💬', iconBg:'rgba(168,85,247,0.15)', desc:'自己內容下他人評論≥20條', statusTag:'passive-tag', statusText:'被動', reward:'+100' }
+    ]
+  },
+  social: {
+    header: { icon:'👥', title:'社交任務（D01-D09）', summary: '社交池週封頂 <b>1,500</b> · 月封頂 <b>6,000</b> · 含每日 + 連續簽到里程碑' },
+    items: [
+      { id:'D01', name:'每日簽到', icon:'✅', iconBg:'rgba(34,197,94,0.15)', desc:'每日永久任務', statusTag:'perm-tag', statusText:'永久', reward:'+20', cur:1, max:1, action:'view' },
+      { id:'D02', name:'每日閱讀5篇', icon:'📖', iconBg:'rgba(96,165,250,0.15)', desc:'每篇≥30秒', reward:'+30', cur:3, max:5, action:'go-home' },
+      { id:'D03', name:'每日互動', icon:'💬', iconBg:'rgba(168,85,247,0.15)', desc:'≥10次互動', reward:'+40', cur:4, max:10, action:'go-home' },
+      { id:'D04', name:'刷視頻15分鐘', icon:'📺', iconBg:'rgba(251,146,60,0.15)', desc:'累計時長', reward:'+50', cur:8, max:15, unit:'min', action:'go-home' },
+      { id:'D05', name:'全勤加成', icon:'🌟', iconBg:'rgba(212,175,55,0.15)', desc:'D01-D04 全完成解鎖', statusTag:'lock-tag', statusText:'未解鎖', reward:'+30', action:'locked' }
+    ],
+    extra: 'checkin'
+  },
+  na: {
+    header: { icon:'📢', title:'獲客任務（NA01-NA05）', summary: '單人最高 <b>1,200 分</b> + 終身 <b>10% 返佣</b> · 週封頂 <b>8,000</b>' },
+    items: [
+      { id:'NA01', name:'邀請註冊', icon:'👋', iconBg:'rgba(96,165,250,0.15)', desc:'好友通過你的連結註冊', reward:'+200', action:'invite' },
+      { id:'NA02', name:'受邀開戶', icon:'📝', iconBg:'rgba(168,85,247,0.15)', desc:'好友完成 KYC + 開戶', reward:'+300', action:'invite' },
+      { id:'NA03', name:'受邀入金', icon:'💰', iconBg:'rgba(212,175,55,0.15)', desc:'好友首次入金 ≥10,000 HKD', reward:'+400', action:'invite' },
+      { id:'NA04', name:'首筆交易', icon:'💹', iconBg:'rgba(34,197,94,0.15)', desc:'好友完成第一筆真實交易', reward:'+200', action:'invite' },
+      { id:'NA05', name:'7日留存', icon:'📆', iconBg:'rgba(251,146,60,0.15)', desc:'好友註冊後 7 天內登錄', reward:'+100', action:'invite' }
+    ]
+  },
+  ms: {
+    header: { icon:'🏅', title:'里程碑任務', summary: '<b>終身任務 · 一次性獎勵</b>，含粉絲增長、連續簽到、累計貢獻' },
+    items: [
+      { id:'C19', name:'粉絲Lv1 · 50人', icon:'👤', iconBg:'rgba(168,85,247,0.15)', desc:'當前 18/50 · 終身1次', statusTag:'ms-tag', statusText:'里程碑', reward:'+500', cur:18, max:50, action:'view' },
+      { id:'C20', name:'粉絲Lv2 · 200人', icon:'⭐', iconBg:'rgba(212,175,55,0.15)', desc:'需 200 粉絲 · 終身1次', statusTag:'ms-tag', statusText:'里程碑', reward:'+2000', cur:18, max:200, action:'view' },
+      { id:'C21', name:'粉絲Lv3 · 1000人', icon:'🔥', iconBg:'rgba(251,146,60,0.15)', desc:'需 1000 粉絲 · 終身1次', statusTag:'ms-tag', statusText:'里程碑', reward:'+8000', cur:18, max:1000, action:'view' },
+      { id:'C22', name:'粉絲Lv4 · 5000人(KOL)', icon:'👑', iconBg:'rgba(239,68,68,0.15)', desc:'KOL里程碑 · 終身1次', statusTag:'ms-tag', statusText:'里程碑', reward:'+30000', cur:18, max:5000, action:'view' },
+      { id:'D06', name:'連續簽到3日', icon:'🎫', iconBg:'rgba(34,197,94,0.15)', desc:'已完成 · 終身1次', statusTag:'done-tag', statusText:'已完成', reward:'+30', action:'view' },
+      { id:'D07', name:'連續簽到7日', icon:'🏅', iconBg:'rgba(212,175,55,0.15)', desc:'當前第 6 天 · 終身1次', reward:'+60', cur:6, max:7, action:'view' },
+      { id:'D08', name:'連續簽到14日', icon:'💎', iconBg:'rgba(96,165,250,0.15)', desc:'終身1次', reward:'+500', cur:6, max:14, action:'view' },
+      { id:'D09', name:'連續簽到30日', icon:'👑', iconBg:'rgba(212,175,55,0.15)', desc:'+ 實物周邊 · 終身1次', reward:'+1500', cur:6, max:30, action:'view' }
+    ]
+  }
+};
+
+// 任务详情
+const taskDetails = {
+  'D01': { name:'每日簽到', pool:'社交池', perDay:'+20', daily:'1次', maxDay:20, rules:['進入APP點擊簽到','日限 1 次','永久任務，每天都有'], related:'' },
+  'D02': { name:'每日閱讀5篇', pool:'社交池', perDay:'+30', daily:'1次', maxDay:30, rules:['閱讀≥5篇內容','每篇停留≥30秒','防止刷分風控檢測'], related:'' },
+  'D04': { name:'每日刷視頻15分鐘', pool:'社交池', perDay:'+50', daily:'1次', maxDay:50, rules:['視頻累計觀看≥15分鐘','需有效觀看行為','日封頂 1 次'], related:'' },
+  'C01': { name:'發布觀點', pool:'內容池', perDay:'+50', daily:'3次', maxDay:150, rules:['短內容 ≥50 字','含至少 1 張圖','日封頂 3 條'], related:'C06-C09 獲讚被動獎勵' },
+  'C02': { name:'深度分析', pool:'內容池', perDay:'+200', daily:'1次', maxDay:200, rules:['長文 ≥300 字','原創、非搬運','日封頂 1 條'], related:'C06-C09 獲讚 / C10 評論區活躍' },
+  'C04': { name:'視頻內容', pool:'內容池', perDay:'+50', daily:'3次', maxDay:150, rules:['原創視頻 ≥60 秒','禁止搬運盜版'], related:'C06-C09 獲讚被動獎勵' },
+  'C05': { name:'直播', pool:'內容池', perDay:'+300', daily:'1次', maxDay:300, rules:['有效直播 ≥30 分鐘','禁止違禁內容'], related:'' },
+  'C14': { name:'高質量評論', pool:'內容池', perDay:'+30', daily:'5次', maxDay:150, rules:['評論字數 ≥30 字','非機器/複製內容（風控）','日封頂 5 條'], related:'C10 評論區活躍（被動+100）' },
+  'C16': { name:'分享到站外', pool:'內容池', perDay:'+30', daily:'5次', maxDay:150, rules:['分享到 IG/FB/小紅書/Twitter','需點擊跳轉確認','日封頂 5 次'], related:'' },
+  'C18': { name:'互關', pool:'內容池', perDay:'+30', daily:'5次', maxDay:150, rules:['與他人互相關注','禁止小號刷分','日封頂 5 次'], related:'C19-C22 粉絲里程碑' },
+  'NA01': { name:'邀請註冊', pool:'獲客池', perDay:'+200', daily:'10人/週', maxDay:'2000/週', rules:['好友通過邀請連結註冊','防止小號註冊（風控）'], related:'NA02-NA05 後續階段獎勵' }
+};
+
+// 邀请阶段
+const inviteStages = [
+  { id:'NA01', name:'邀請註冊', desc:'成功邀請1位普通用戶註冊', pts:200 },
+  { id:'NA02', name:'受邀開戶', desc:'完成 KYC + 開通交易帳戶', pts:300 },
+  { id:'NA03', name:'受邀入金', desc:'首次轉入 ≥ 10,000 HKD', pts:400 },
+  { id:'NA04', name:'首筆交易', desc:'完成第一筆真實交易', pts:200 },
+  { id:'NA05', name:'7日留存', desc:'註冊後 7 天內至少登錄 1 次', pts:100 }
+];
+
+// 受邀人
+const invitees = [
+  { id:'wendy', name:'Wendy_L***', avClass:'ct-av-1', avLetter:'W', status:'online', today:45, weekly:180, total:480, joinDays:19, meta:'已完成首筆交易 · 剛剛做任務',
+    timeline:[
+      {stage:'NA01 · 邀請註冊', time:'2026/04/22 完成', pts:200, done:true},
+      {stage:'NA02 · 完成 KYC + 開戶', time:'2026/04/23 完成', pts:300, done:true},
+      {stage:'NA05 · 7日留存', time:'2026/04/29 完成', pts:100, done:true},
+      {stage:'NA04 · 首筆真實交易', time:'2026/05/02 完成', pts:200, done:true},
+      {stage:'NA03 · 首次入金 ≥ 10,000 HKD', time:'待完成', pts:400, done:false}
+    ],
+    history:[
+      {task:'C14 高質量評論 ×3', time:'今天 11:02', val:9, capped:false},
+      {task:'D04 刷視頻', time:'今天 10:15', val:5, capped:false},
+      {task:'C01 發布觀點 ×3', time:'今天 10:30', val:15, capped:false},
+      {task:'C08 內容獲讚 Lv3', time:'今天 10:45', val:80, capped:false},
+      {task:'⚠️ 已達單日上限 150', time:'今天 10:45 起', val:0, capped:true}
+    ]
+  },
+  { id:'leo', name:'Leo_M***', avClass:'ct-av-2', avLetter:'L', status:'kyc', today:25, weekly:100, total:260, joinDays:6, meta:'6 天前加入 · 今日簽到+閱讀',
+    timeline:[
+      {stage:'NA01 · 邀請註冊', time:'2026/05/05', pts:200, done:true},
+      {stage:'NA02 · 完成 KYC + 開戶', time:'2026/05/10', pts:300, done:true},
+      {stage:'NA03 · 首次入金', time:'待完成', pts:400, done:false},
+      {stage:'NA04 · 首筆交易', time:'待完成', pts:200, done:false},
+      {stage:'NA05 · 7日留存', time:'待完成 · 第 6 天', pts:100, done:false}
+    ],
+    history:[
+      {task:'D01 每日簽到', time:'今天 09:30', val:2, capped:false},
+      {task:'D02 閱讀5篇', time:'今天 10:00', val:3, capped:false},
+      {task:'C02 深度分析', time:'今天 10:45', val:20, capped:false}
+    ]
+  },
+  { id:'fiona', name:'Fiona_T***', avClass:'ct-av-3', avLetter:'F', status:'kyc', today:10, weekly:60, total:380, joinDays:14, meta:'14 天前加入 · 今日僅簽到',
+    timeline:[
+      {stage:'NA01 · 邀請註冊', time:'2026/04/27', pts:200, done:true},
+      {stage:'NA02 · 完成 KYC + 開戶', time:'2026/04/28', pts:300, done:true},
+      {stage:'NA03 · 首次入金 ≥ 10,000', time:'2026/05/02 完成', pts:400, done:true},
+      {stage:'NA04 · 首筆交易', time:'待完成', pts:200, done:false},
+      {stage:'NA05 · 7日留存', time:'2026/05/04 完成', pts:100, done:true}
+    ],
+    history:[
+      {task:'D01 每日簽到', time:'今天 09:00', val:2, capped:false},
+      {task:'D02 閱讀', time:'今天 10:30', val:3, capped:false},
+      {task:'D03 互動', time:'今天 11:15', val:4, capped:false},
+      {task:'⚠️ 觸發風控延遲', time:'今天 11:30', val:1, capped:false}
+    ]
+  },
+  { id:'jason', name:'Jason_P***', avClass:'ct-av-4', avLetter:'J', status:'new', today:0, weekly:0, total:80, joinDays:2, meta:'2 天前加入 · 未完成 KYC',
+    timeline:[
+      {stage:'NA01 · 邀請註冊', time:'2026/05/09', pts:200, done:true},
+      {stage:'NA02 · KYC + 開戶', time:'進行中 · 提示完善資料', pts:300, done:false},
+      {stage:'NA03 · 入金', time:'待完成', pts:400, done:false},
+      {stage:'NA04 · 首筆交易', time:'待完成', pts:200, done:false},
+      {stage:'NA05 · 7日留存', time:'待完成', pts:100, done:false}
+    ],
+    history:[
+      {task:'NA01 邀請註冊', time:'2026/05/09', val:'—', capped:false}
+    ]
+  },
+  { id:'mia', name:'Mia_K***', avClass:'ct-av-5', avLetter:'M', status:'sleep', today:0, weekly:0, total:40, joinDays:20, meta:'20 天前加入 · 7 天未活躍',
+    timeline:[
+      {stage:'NA01 · 邀請註冊', time:'2026/04/21', pts:200, done:true},
+      {stage:'NA02 · KYC + 開戶', time:'待完成', pts:300, done:false},
+      {stage:'其他階段', time:'待完成', pts:0, done:false}
+    ],
+    history:[
+      {task:'NA01 邀請註冊', time:'2026/04/21', val:'—', capped:false},
+      {task:'D01 簽到（4/21-4/25）', time:'已 7 天無登錄', val:0, capped:false}
+    ]
+  }
+];
+
+const statusMap = {
+  online: {cls:'active-now', text:'線上'},
+  kyc: {cls:'kyc', text:'已KYC'},
+  new: {cls:'new', text:'新用戶'},
+  sleep: {cls:'sleep', text:'沉睡'}
+};
+
+let inviteeSortBy = 'today';
+
+// 排行榜数据
+let lbType = 'week';
+const lbData = {
+  week: {
+    countdown: '2天 14:28:53',
+    top3: [
+      {rank:2, name:'小財迷***', score:5820, avatar:'😊', prize:'1000 HKD'},
+      {rank:1, name:'Trader_K***', score:6250, avatar:'🏆', prize:'1500 HKD'},
+      {rank:3, name:'Alpha_H***', score:5340, avatar:'🎯', prize:'600 HKD'}
+    ],
+    myRank: 47, myScore: 3420, myPrize: '100 HKD', myTrend: 'up3', toNext: '再 680 分升至第 11-50 名',
+    list: [
+      {rank:4, name:'Wealth_M***', score:5180, trend:'up:2', prize:'300 HKD', band:'tier1'},
+      {rank:5, name:'港股老兵***', score:5020, trend:'down:1', prize:'300 HKD', band:'tier1'},
+      {rank:6, name:'Bull_Run***', score:4880, trend:'up:1', prize:'300 HKD', band:'tier1'},
+      {rank:7, name:'NeuralPro***', score:4720, trend:'same', prize:'300 HKD', band:'tier1'},
+      {rank:8, name:'Diamond_H***', score:4620, trend:'down:3', prize:'300 HKD', band:'tier1'},
+      {rank:9, name:'Quant_X***', score:4540, trend:'up:5', prize:'300 HKD', band:'tier1'},
+      {rank:10, name:'AlphaSeeker', score:4490, trend:'same', prize:'300 HKD', band:'tier1'},
+      'split:tier2',
+      {rank:11, name:'TechBull***', score:4380, trend:'up:2', prize:'100 HKD', band:'tier2'},
+      {rank:12, name:'ValueHunt***', score:4210, trend:'down:1', prize:'100 HKD', band:'tier2'},
+      {rank:25, name:'PortMgr_J***', score:3820, trend:'up:8', prize:'100 HKD', band:'tier2'},
+      {rank:46, name:'StartUp_L***', score:3440, trend:'down:2', prize:'100 HKD', band:'tier2'},
+      'me',
+      {rank:48, name:'Investor***', score:3390, trend:'up:1', prize:'100 HKD', band:'tier2'},
+      {rank:50, name:'CFA_Holder***', score:3310, trend:'same', prize:'100 HKD', band:'tier2'},
+      'split:tier3',
+      {rank:51, name:'Newbie_W***', score:3280, trend:'up:4', prize:'50 HKD', band:'tier3'},
+      {rank:75, name:'Daily_Trader***', score:2680, trend:'down:5', prize:'50 HKD', band:'tier3'},
+      {rank:99, name:'LastWinner***', score:1850, trend:'up:11', prize:'50 HKD', band:'tier3'},
+      {rank:100, name:'EdgeOf100***', score:1820, trend:'down:2', prize:'50 HKD', band:'tier3'},
+      'no-prize',
+      {rank:101, name:'NearMiss***', score:1798, trend:'down:3', prize:'未獲獎', band:'none'}
+    ]
+  },
+  month: {
+    countdown: '20天 14:28:53',
+    top3: [
+      {rank:2, name:'小財迷***', score:24180, avatar:'😊', prize:'3000 HKD'},
+      {rank:1, name:'Trader_K***', score:28450, avatar:'🏆', prize:'5000 HKD'},
+      {rank:3, name:'Alpha_H***', score:22120, avatar:'🎯', prize:'2000 HKD'}
+    ],
+    myRank: 82, myScore: 8750, myPrize: '100 HKD', myTrend: 'up5', toNext: '再 4,820 分升至 11-50 名（300 HKD）',
+    list: [
+      {rank:4, name:'Wealth_M***', score:21250, trend:'up:1', prize:'800 HKD', band:'tier1'},
+      {rank:5, name:'港股老兵***', score:20480, trend:'down:1', prize:'800 HKD', band:'tier1'},
+      {rank:6, name:'Bull_Run***', score:19720, trend:'up:3', prize:'800 HKD', band:'tier1'},
+      {rank:8, name:'Diamond_H***', score:18540, trend:'same', prize:'800 HKD', band:'tier1'},
+      {rank:10, name:'AlphaSeeker', score:17920, trend:'up:2', prize:'800 HKD', band:'tier1'},
+      'split:tier2',
+      {rank:11, name:'TechBull***', score:17280, trend:'up:1', prize:'300 HKD', band:'tier2'},
+      {rank:30, name:'PortMgr_J***', score:13420, trend:'up:6', prize:'300 HKD', band:'tier2'},
+      {rank:50, name:'CFA_Holder***', score:11050, trend:'same', prize:'300 HKD', band:'tier2'},
+      'split:tier3',
+      {rank:51, name:'Newbie_W***', score:10880, trend:'up:3', prize:'100 HKD', band:'tier3'},
+      {rank:82, name:'我（暫定）', score:8750, trend:'up:5', prize:'100 HKD', band:'tier3'},
+      'me',
+      {rank:83, name:'CloseRival***', score:8720, trend:'down:1', prize:'100 HKD', band:'tier3'},
+      {rank:100, name:'EdgeOf100***', score:7240, trend:'down:2', prize:'100 HKD', band:'tier3'},
+      'no-prize',
+      {rank:101, name:'NearMiss***', score:7180, trend:'up:1', prize:'未獲獎', band:'none'}
+    ]
+  }
+};
+
+const bandLabels = {
+  tier1: '↓ 第 4-10 名（7人）· 每人 300 HKD ↓',
+  tier2: '↓ 第 11-50 名（40人）· 每人 100 HKD ↓',
+  tier3: '↓ 第 51-100 名（50人）· 每人 50 HKD ↓',
+  'no-prize': '────── 未獲獎區 ──────'
+};
+const bandMonthLabels = {
+  tier1: '↓ 第 4-10 名（7人）· 每人 800 HKD ↓',
+  tier2: '↓ 第 11-50 名（40人）· 每人 300 HKD ↓',
+  tier3: '↓ 第 51-100 名（50人）· 每人 100 HKD ↓',
+  'no-prize': '────── 未獲獎區 ──────'
+};
+
+// 积分明细
+let pdFilterType = 'all';
+let pdSearchTerm = '';
+const pdData = [
+  {date:'今天 · 2026/05/11', items:[
+    {icon:'✅', name:'D01 每日簽到', time:'10:23', pool:'d', poolName:'社交池', val:20},
+    {icon:'📖', name:'D02 每日閱讀', time:'10:45', pool:'d', poolName:'社交池', val:30},
+    {icon:'💰', name:'返佣 · Wendy_L*** 做任務', time:'11:02', pool:'r', poolName:'返佣池', val:45, extra:'10%'},
+    {icon:'📝', name:'C14 高質量評論 ×5', time:'11:12', pool:'c', poolName:'內容池', val:150, extra:'本週輪換'},
+    {icon:'⚠️', name:'D03 每日互動（超封頂）', time:'14:20', pool:'d', poolName:'社交池', val:40, capped:true}
+  ]},
+  {date:'昨天 · 2026/05/10', items:[
+    {icon:'👥', name:'NA02 邀請開戶 · Leo_M***', time:'16:08', pool:'n', poolName:'獲客池', val:300},
+    {icon:'🏅', name:'D07 連續7日簽到', time:'00:01', pool:'d', poolName:'社交池', val:60, extra:'里程碑'},
+    {icon:'💰', name:'返佣 · Fiona 連續簽到', time:'09:00', pool:'r', poolName:'返佣池', val:8, extra:'10%'},
+    {icon:'📝', name:'C02 深度分析（1篇）', time:'15:30', pool:'c', poolName:'內容池', val:200}
+  ]},
+  {date:'前天 · 2026/05/09', items:[
+    {icon:'👋', name:'NA01 Jason_P*** 註冊', time:'19:32', pool:'n', poolName:'獲客池', val:200},
+    {icon:'✅', name:'D01 簽到', time:'08:42', pool:'d', poolName:'社交池', val:20},
+    {icon:'💎', name:'C07 內容獲讚 Lv2 (50讚)', time:'21:15', pool:'c', poolName:'內容池', val:200, extra:'被動觸發'},
+    {icon:'💰', name:'返佣 · Wendy 視頻 ×3', time:'22:00', pool:'r', poolName:'返佣池', val:15, extra:'10%'}
+  ]}
+];
+
+const poolFilterMap = {all:null, c:'內容池', d:'社交池', n:'獲客池', r:'返佣池'};
+
+// 返佣明细
+let commFilterType = 'all';
+
+// 商城
+let mallFilterType = 'all';
+const mallItems = [
+  { cat:'card', name:'Apple Gift Card 50 HKD', icon:'🍎', cost:10000, stock:'充足', hot:true },
+  { cat:'card', name:'Apple Gift Card 100 HKD', icon:'🍎', cost:20000, stock:'充足' },
+  { cat:'card', name:'京東 E-Card 50 HKD', icon:'🛒', cost:10000, stock:'充足' },
+  { cat:'card', name:'天貓超市卡 100 HKD', icon:'🏪', cost:20000, stock:'充足' },
+  { cat:'fb', name:'Starbucks 30 HKD', icon:'☕', cost:6000, stock:'充足', hot:true },
+  { cat:'fb', name:'Wellcome 惠康 50 HKD', icon:'🥬', cost:10000, stock:'限量' },
+  { cat:'fb', name:'McDonald 麥當勞 50 HKD', icon:'🍔', cost:10000 },
+  { cat:'merch', name:'NeuralFin 紀念T恤', icon:'👕', cost:15000, stock:'限量 100', hot:true },
+  { cat:'merch', name:'NeuralFin 鋼筆套裝', icon:'✒️', cost:25000, stock:'限量 50' },
+  { cat:'merch', name:'NeuralFin 行李箱', icon:'🧳', cost:80000, stock:'限量 20' },
+  { cat:'service', name:'AI 高級會員 1個月', icon:'🤖', cost:5000 },
+  { cat:'service', name:'數據包訂閱 3個月', icon:'📊', cost:12000 }
+];
+
+// 历届获奖
+let whFilter = 'last-week';
+const whData = {
+  'last-week': { title:'上週週榜（2026/05/05-05/11）', total:'11,700 HKD · 100 人', winners:[
+    {rank:1, name:'Trader_K***', score:6250, prize:'1500 HKD'},
+    {rank:2, name:'小財迷***', score:5820, prize:'1000 HKD'},
+    {rank:3, name:'Alpha_H***', score:5340, prize:'600 HKD'},
+    {rank:4, name:'Wealth_M***', score:5180, prize:'300 HKD'},
+    {rank:5, name:'港股老兵***', score:5020, prize:'300 HKD'},
+    {rank:10, name:'AlphaSeeker', score:4490, prize:'300 HKD'},
+    {rank:25, name:'我（前次）', score:3820, prize:'100 HKD', me:true},
+    {rank:50, name:'CFA_Holder***', score:3310, prize:'100 HKD'},
+    {rank:75, name:'Daily_Trader***', score:2680, prize:'50 HKD'},
+    {rank:100, name:'EdgeOf100***', score:1820, prize:'50 HKD'}
+  ]},
+  'last-month': { title:'上月月榜（2026/04）', total:'32,600 HKD · 100 人', winners:[
+    {rank:1, name:'Trader_K***', score:32450, prize:'5000 HKD'},
+    {rank:2, name:'AlphaQuant***', score:28920, prize:'3000 HKD'},
+    {rank:3, name:'港股老兵***', score:25840, prize:'2000 HKD'},
+    {rank:10, name:'Diamond_H***', score:19720, prize:'800 HKD'},
+    {rank:30, name:'我（前次）', score:11250, prize:'300 HKD', me:true},
+    {rank:60, name:'TechBull***', score:9450, prize:'100 HKD'},
+    {rank:100, name:'EdgeOf100***', score:7080, prize:'100 HKD'}
+  ]},
+  'earlier': { title:'更早歷史（彙總）', total:'累計派發 320,000+ HKD', winners:[
+    {rank:'-', name:'2026/04 月榜 TOP', score:'5000 HKD', prize:'Trader_K***'},
+    {rank:'-', name:'2026/03 月榜 TOP', score:'5000 HKD', prize:'AlphaQuant***'},
+    {rank:'-', name:'2026/02 月榜 TOP', score:'5000 HKD', prize:'Diamond_H***'}
+  ]}
+};
+
+// 收件箱
+const inboxData = [
+  { id:1, type:'award', title:'獲獎通知', desc:'恭喜！你在上週週榜獲得第 47 名，獎品為 100 HKD 現金券等值權益。請在 7 個工作日內確認偏好品類。', time:'2 小時前', unread:true, action:'claim' },
+  { id:2, type:'point', title:'積分到帳', desc:'NA02 受邀開戶已結算：Leo_M*** 完成開戶，+300 分已計入獲客池。', time:'昨天 16:08', unread:true, action:'invitee:leo' },
+  { id:3, type:'sys', title:'封頂提醒', desc:'你的社交池本週已獲 1,210 / 1,500 分，即將封頂。超出部分將僅計入歷史累計。', time:'昨天 10:30', unread:true, action:'task' },
+  { id:4, type:'point', title:'返佣到帳', desc:'Wendy_L*** 今日做任務返佣 +45 分已入賬，累計今日 +80 分。', time:'3 天前', unread:false, action:'invitee:wendy' },
+  { id:5, type:'sys', title:'本週任務輪換', desc:'第 2 週任務組合已上線：D04 刷視頻、C14 高質量評論、C18 互關、C16 分享外鏈。', time:'5 天前', unread:false, action:'task' }
+];
+
+// 帮助
+const helpData = [
+  { q:'💎 什麼是三類積分？', a:'每個用戶擁有 <b>3 個積分賬戶</b>：<br>• <b>歷史累計</b>：永久保留，用於兌換商城<br>• <b>每週積分</b>：週一 00:00 HKT 清零，用於週榜排名<br>• <b>每月積分</b>：每月 1 日 00:00 清零，用於月榜排名' },
+  { q:'💠 什麼是四大分數池？', a:'內容/社交/獲客/返佣，<b>各自獨立封頂</b>互不影響：<br>• 內容池（C01-C22）：週 7,000 / 月 25,000<br>• 社交池（D01-D09）：週 1,500 / 月 6,000<br>• 獲客池（NA01-NA05）：週 8,000 / 月 25,000<br>• 返佣池：週 6,000 / 月 20,000<br>超出封頂部分<b>僅計入歷史累計</b>。' },
+  { q:'🔄 每週任務為什麼會變？', a:'每月 4 週採用<b>任務輪換機制</b>，不同週組合不同任務，保持新鮮感避免疲勞。永久任務（如 D01 簽到）每週都有。' },
+  { q:'💰 返佣怎麼算？', a:'你的受邀人每次做任務得積分的 <b>10%</b> 實時返給你。單受邀人單日上限 <b>150 分</b>，僅單級返佣（防二級刷分）。邀請池/返佣池本身不參與返佣。' },
+  { q:'🏆 獎品什麼時候發？', a:'週榜：<b>週日 23:59 結算 → 次週二 10:00 發獎</b><br>月榜：<b>月底 23:59 結算 → 次月第 2 工作日發獎</b><br>運營客服 3 個工作日內聯繫，你需 7 天內回覆確認品類。' },
+  { q:'🚫 哪些用戶不能參與？', a:'• 站內博主/官方認證帳號不參與活動<br>• Bot 白名單用戶不計分<br>• 註銷帳號後 30 天內不得重新註冊' },
+  { q:'📱 邀請上限為什麼是 10 人/週？', a:'普通用戶每週最多邀請 10 人。後期會為 <b>KOC/KOL</b> 開放更高上限（申請 KOL 認證）。超出上限的邀請積分仍計入歷史累計。' },
+  { q:'⚠️ 什麼是封頂？', a:'每個分數池都有<b>週/月封頂</b>。達到後當前週/月不再累加該池積分，但<b>歷史累計</b>仍然繼續記錄（用於兌換商城）。設置封頂是為了防止刷分。' }
+];
+
+// 徽章
+const badges = [
+  {n:'7日簽到', i:'🏅', got:true}, {n:'首次邀請', i:'👥', got:true}, {n:'爆款內容', i:'🔥', got:true},
+  {n:'14日簽到', i:'💎', got:false}, {n:'30日簽到', i:'👑', got:false}, {n:'千粉', i:'⭐', got:false},
+  {n:'TOP10', i:'🎖️', got:false}, {n:'KOL', i:'🌟', got:false}, {n:'萬粉', i:'🚀', got:false},
+  {n:'交易者', i:'💹', got:false}, {n:'內容王', i:'📚', got:false}, {n:'年度', i:'🎊', got:false}
+];
+
+// 设置状态
+const settings = { notice: true, privacy: true, lang: ['繁體中文','简体中文','English'], langIdx: 0, currency: ['HKD','USD','CNY'], currencyIdx: 0 };
+
+// 商城分类
+const mallFilters = [
+  {id:'all', name:'全部'}, {id:'card', name:'禮品卡'}, {id:'fb', name:'餐飲'}, {id:'merch', name:'品牌周邊'}, {id:'service', name:'服務'}
+];
+
+// 历届筛选
+const whFilters = [{id:'last-week',n:'上週週榜'},{id:'last-month',n:'上月月榜'},{id:'earlier',n:'更早歷史'}];
+
+/* ========== 渲染函数 ========== */
+
+// 首页
+let homeTab = '發現';
+let homeCat = '全部';
+
+function renderHomeTabs() {
+  document.getElementById('homeTabs').innerHTML = homeTabsData.map(t =>
+    `<span class="home-tab ${t === homeTab ? 'active' : ''}" onclick="setHomeTab('${t}')">${t}</span>`
+  ).join('');
+}
+function setHomeTab(t) { homeTab = t; renderHomeTabs(); renderFeed(); }
+
+function renderCats() {
+  document.getElementById('catList').innerHTML = homeCats.map(c =>
+    `<div class="cat ${c === homeCat ? 'active' : ''}" onclick="setHomeCat('${c}')">${c}</div>`
+  ).join('');
+}
+function setHomeCat(c) { homeCat = c; renderCats(); renderFeed(); }
+
+function renderFeed() {
+  let items = allFeeds[homeTab] || [];
+  if (homeCat !== '全部' && homeCat !== '社區熱榜') items = items.filter(i => i.cat === homeCat);
+  if (homeCat === '社區熱榜') items = [...items].sort((a,b) => b.l - a.l);
+  
+  if (items.length === 0) {
+    document.getElementById('feedList').innerHTML = `<div class="feed-empty">😔 沒有「${homeTab} · ${homeCat}」內容</div>`;
+    return;
+  }
+  document.getElementById('feedList').innerHTML = items.map((it, idx) => `
+    <div class="card" onclick="readArticle('${it.t.replace(/'/g,'')}')">
+      <div class="card-img" style="background: linear-gradient(135deg, #${it.g.split(',')[0]}, #${it.g.split(',')[1]});">${it.e}</div>
+      <div class="card-title">${it.t}</div>
+      <div class="card-footer">
+        <div class="card-author"><div class="card-avatar">${it.av}</div><span>${it.a}</span></div>
+        <span class="card-like" onclick="event.stopPropagation(); likeCard(this, ${idx})">♡ ${it.l}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function readArticle(title) {
+  showToast('📖 進入文章：' + title.slice(0,18) + '... · +6秒可獲 D02 進度');
+}
+function likeCard(el, idx) {
+  const txt = el.textContent;
+  const num = parseInt(txt.replace(/[^\d]/g, ''));
+  el.innerHTML = '❤️ ' + (num + 1);
+  el.style.color = '#ef4444';
+  showToast('❤️ 已點讚 · 可觸發 D03 互動進度');
+}
+
+// 行情
+let marketTab = '港股';
+function renderMarketTabs() {
+  document.getElementById('marketTabs').innerHTML = marketTabsData.map(t => 
+    `<div class="cat ${t === marketTab ? 'active' : ''}" onclick="setMarketTab('${t}')">${t}</div>`
+  ).join('');
+}
+function setMarketTab(t) { marketTab = t; renderMarketTabs(); renderMarket(); }
+function renderMarket() {
+  const items = marketData[marketTab] || [];
+  document.getElementById('marketContent').innerHTML = `
+    <div style="background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;">
+      <div style="padding: 10px 14px; display: flex; font-size: 11px; color: #666; border-bottom: 1px solid rgba(255,255,255,0.04);">
+        <div style="flex: 1.5;">名稱/代碼</div><div style="flex: 1; text-align: right;">最新價</div><div style="flex: 1; text-align: right;">漲跌</div>
+      </div>
+      ${items.map(s => `
+        <div style="padding: 12px 14px; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer;" onclick="addToWatchlist('${s.code}','${s.name}')">
+          <div style="flex: 1.5;"><div style="font-size: 13px; font-weight: 700;">${s.name}</div><div style="font-size: 10px; color: #666; font-family: monospace; margin-top: 2px;">${s.code}</div></div>
+          <div style="flex: 1; text-align: right; font-size: 14px; font-weight: 800; font-family: monospace;">${s.price}</div>
+          <div style="flex: 1; text-align: right; font-size: 12px; font-weight: 700; color: ${s.up ? '#22c55e' : '#ef4444'}; font-family: monospace;">${s.change}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+function addToWatchlist(code, name) { showToast('⭐ ' + name + ' 已加入自選'); }
+
+// 自选
+function renderWatchlist() {
+  document.getElementById('watchlistContent').innerHTML = `
+    <div style="margin-bottom: 12px; padding: 12px; background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.25); border-radius: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="openStack('points-center')">
+      <span style="font-size: 22px;">🎁</span>
+      <div style="flex: 1;"><div style="font-size: 13px; font-weight: 800; color: #F8DC7A;">關注股票漲跌 也能賺積分</div><div style="font-size: 10px; color: #888;">D03 互動 +40 分/日</div></div>
+      <div style="color: #F8DC7A;">›</div>
+    </div>
+    <div style="background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;">
+      ${watchlistData.map(s => `
+        <div style="padding: 12px 14px; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer;" onclick="showToast('${s.name} ${s.price} ${s.change} · 點擊查看詳情')">
+          <div style="flex: 1;"><div style="font-size: 13px; font-weight: 700;">${s.name}</div><div style="font-size: 10px; color: #666; font-family: monospace; margin-top: 2px;">${s.code} · 量${s.vol}</div></div>
+          <div style="text-align: right;"><div style="font-size: 14px; font-weight: 800; font-family: monospace;">${s.price}</div><div style="font-size: 11px; font-weight: 700; color: ${s.up ? '#22c55e' : '#ef4444'}; font-family: monospace; margin-top: 2px;">${s.change}</div></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// 交易
+function renderTrade() {
+  document.getElementById('tradeContent').innerHTML = `
+    <div style="margin: 0 16px 14px; padding: 16px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="openStack('points-center')">
+      <div><div style="font-size: 15px; font-weight: 800; color: #fff;">💰 首筆交易得 200 積分</div><div style="font-size: 11px; color: rgba(255,255,255,0.8); margin-top: 3px;">NA04 任務 · 完成後可獲 200 獲客積分</div></div>
+      <div style="padding: 7px 13px; background: #fff; color: #16a34a; border-radius: 16px; font-size: 12px; font-weight: 800;">領取 ›</div>
+    </div>
+    <div style="margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+      <div class="clickable" onclick="showToast('總資產：HKD 128,450 · 點擊查看資產明細')"><div style="font-size: 10px; color: #888; margin-bottom: 4px;">總資產 HKD</div><div style="font-size: 16px; font-weight: 900;">128,450</div></div>
+      <div class="clickable" onclick="showToast('今日盈虧 +1,250 · 騰訊+1.2K · 蘋果+50')"><div style="font-size: 10px; color: #888; margin-bottom: 4px;">今日盈虧</div><div style="font-size: 16px; font-weight: 900; color: #22c55e;">+1,250</div></div>
+      <div class="clickable" onclick="showToast('可用 HKD 28,300 · 可下單金額')"><div style="font-size: 10px; color: #888; margin-bottom: 4px;">可用資金</div><div style="font-size: 16px; font-weight: 900;">28,300</div></div>
+    </div>
+    <div style="margin: 0 16px 14px; padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+      <div class="quick-item" onclick="showToast('💳 入金 · 銀行卡/電子錢包')"><div class="quick-icon">💳</div><div class="quick-label">入金</div></div>
+      <div class="quick-item" onclick="showToast('💸 出金 · 處理中 0 筆')"><div class="quick-icon">💸</div><div class="quick-label">出金</div></div>
+      <div class="quick-item" onclick="showToast('📋 當前持倉 5 支')"><div class="quick-icon">📋</div><div class="quick-label">持倉</div></div>
+      <div class="quick-item" onclick="showToast('📜 今日訂單 0 筆 · 累計 47 筆')"><div class="quick-icon">📜</div><div class="quick-label">訂單</div></div>
+    </div>
+    <div class="section-head"><div class="section-head-title">📊 今日持倉</div><div class="section-head-more clickable" onclick="showToast('查看完整持倉')">全部 ›</div></div>
+    <div style="margin: 0 16px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;">
+      <div style="padding: 14px; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer;" onclick="showToast('騰訊控股 持倉 200 股 · 市值 HK$82,480')">
+        <div style="flex: 1;"><div style="font-size: 13px; font-weight: 700;">騰訊控股 (00700.HK)</div><div style="font-size: 11px; color: #888; margin-top: 2px;">200 股 · 成本 405.20</div></div>
+        <div style="text-align: right;"><div style="font-size: 14px; font-weight: 900; font-family: monospace;">+1,440</div><div style="font-size: 11px; color: #22c55e; font-family: monospace;">+1.78%</div></div>
+      </div>
+      <div style="padding: 14px; display: flex; align-items: center; cursor: pointer;" onclick="showToast('蘋果 持倉 50 股 · 市值 US$10,790')">
+        <div style="flex: 1;"><div style="font-size: 13px; font-weight: 700;">蘋果 (AAPL)</div><div style="font-size: 11px; color: #888; margin-top: 2px;">50 股 · 成本 213.10</div></div>
+        <div style="text-align: right;"><div style="font-size: 14px; font-weight: 900; font-family: monospace;">+135</div><div style="font-size: 11px; color: #22c55e; font-family: monospace;">+1.27%</div></div>
+      </div>
+    </div>
+  `;
+}
+
+// 三账户
+function renderAccSwitcher() {
+  document.getElementById('accSwitcher').innerHTML = ['history','week','month'].map(k => {
+    const d = accData[k];
+    const labels = {history:'歷史累計', week:'本週積分', month:'本月積分'};
+    return `<div class="pc-acc-tab ${currentAcc===k?'active':''}" onclick="setAcc('${k}')"><div class="pc-acc-tab-title">${labels[k]}</div><div class="pc-acc-tab-num gold-text">${d.num}</div><div class="pc-acc-tab-reset">${d.tag}</div></div>`;
+  }).join('');
+  document.getElementById('accDetail').innerHTML = accData[currentAcc].detail;
+}
+function setAcc(k) { currentAcc = k; renderAccSwitcher(); }
+
+// 分数池
+let poolView = 'week';
+function renderPoolSwitcher() {
+  document.getElementById('poolSwitcher').innerHTML = `
+    <div class="pools-switch ${poolView==='week'?'active':''}" onclick="setPoolView('week')">週封頂</div>
+    <div class="pools-switch ${poolView==='month'?'active':''}" onclick="setPoolView('month')">月封頂</div>
+  `;
+}
+function setPoolView(v) { poolView = v; renderPoolSwitcher(); renderPools(); }
+function renderPools() {
+  const data = poolData[poolView];
+  const actMap = { task: "openStack('task-center')", invite: "openStack('invite')", commission: "openStack('commission-detail')" };
+  document.getElementById('poolList').innerHTML = data.map(p => {
+    const pct = ((p.cur / p.cap) * 100).toFixed(1);
+    return `
+      <div class="pool-row" onclick="${actMap[p.act]}">
+        <div class="pool-info"><div class="pool-name">${p.name} <span class="pool-tasks">${p.tasks}</span></div><div class="pool-progress-num">${p.cur.toLocaleString()} / ${p.cap.toLocaleString()}</div></div>
+        <div class="pool-bar"><div class="pool-fill ${p.cls}" style="width: ${Math.min(pct, 100)}%;"></div></div>
+        ${p.tip ? `<div class="pool-tip">${p.tip}</div>` : ''}
+        ${p.warn ? `<div class="pool-warn">${p.warn}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// 每周轮换
+function renderWeekRotate() {
+  document.getElementById('wrGrid').innerHTML = weekTasks.map((w,i) =>
+    `<div class="wr-tab ${i===currentWeek?'active':''}" onclick="setCurrentWeek(${i})">${w.name.split('·')[0]}</div>`
+  ).join('');
+  const w = weekTasks[currentWeek];
+  document.getElementById('wrList').innerHTML = w.list.map(t =>
+    `<div class="wr-item" onclick="openTaskDetail('${t.id}')"><span class="wr-item-id">${t.id}</span><span class="wr-item-name">${t.n}</span><span class="wr-item-pts">${t.p}</span></div>`
+  ).join('');
+  document.getElementById('wrTotal').innerHTML = `每日總計 <b>${w.daily} 分</b> · 每週總計 <b>${w.weekly.toLocaleString()} 分</b>`;
+}
+function setCurrentWeek(i) { currentWeek = i; renderWeekRotate(); }
+
+// 推荐任务
+function renderRecommendTasks() {
+  document.getElementById('recommendTasks').innerHTML = `
+    <div class="task-item">
+      <div class="task-icon" style="background: rgba(34,197,94,0.15);">✅</div>
+      <div class="task-info" onclick="openTaskDetail('D01')"><div class="task-name">每日簽到 <span class="task-id">D01</span></div><div class="task-desc">社交池 · 連續簽到第 6 天</div></div>
+      <div class="task-action claim" onclick="event.stopPropagation(); claimTask(this, 20)">+20 分</div>
+    </div>
+    <div class="task-item">
+      <div class="task-icon" style="background: rgba(96,165,250,0.15);">📝</div>
+      <div class="task-info" onclick="openTaskDetail('C14')"><div class="task-name">高質量評論 <span class="task-id">C14</span></div><div class="task-desc">內容池 · 今日 2/5 次 · 輪換</div></div>
+      <div class="task-action gold-btn" onclick="event.stopPropagation(); switchTab('home'); showToast('🏠 已跳轉到社區 · 寫評論吧')">去評論</div>
+    </div>
+    <div class="task-item">
+      <div class="task-icon" style="background: rgba(251,146,60,0.15);">📺</div>
+      <div class="task-info" onclick="openTaskDetail('D04')"><div class="task-name">每日刷視頻 <span class="task-id">D04</span></div><div class="task-desc">社交池 · 已觀看 8/15 分鐘</div></div>
+      <div class="task-action gold-btn" onclick="event.stopPropagation(); switchTab('home'); showToast('🏠 已跳轉到視頻區')">去觀看</div>
+    </div>
+    <div class="task-item">
+      <div class="task-icon" style="background: rgba(236,72,153,0.15);">👥</div>
+      <div class="task-info" onclick="openStack('invite')"><div class="task-name">邀請好友 <span class="task-id">NA01-05</span></div><div class="task-desc">獲客池 · 單人最高 1,200 分 + 終身 10% 返佣</div></div>
+      <div class="task-action gold-btn" onclick="event.stopPropagation(); openStack('invite')">去邀請</div>
+    </div>
+  `;
+}
+
+function renderWinnersTop3() {
+  document.getElementById('winnersTop3').innerHTML = `
+    <div class="winner-row" onclick="openStack('win-history')"><div class="winner-rank top1">1</div><div class="winner-name">Trader_K***</div><div class="winner-prize">1,500 HKD</div></div>
+    <div class="winner-row" onclick="openStack('win-history')"><div class="winner-rank top2">2</div><div class="winner-name">小財迷***</div><div class="winner-prize">1,000 HKD</div></div>
+    <div class="winner-row" onclick="openStack('win-history')"><div class="winner-rank top3">3</div><div class="winner-name">Alpha_H***</div><div class="winner-prize">600 HKD</div></div>
+  `;
+}
+
+// 受邀人
+function renderInviteeTabs() {
+  document.getElementById('inviteeTabs').innerHTML = `
+    <div class="ct-list-tab ${inviteeSortBy==='today'?'active':''}" onclick="setInviteeSort('today')">今日</div>
+    <div class="ct-list-tab ${inviteeSortBy==='total'?'active':''}" onclick="setInviteeSort('total')">總計</div>
+  `;
+}
+function setInviteeSort(s) { inviteeSortBy = s; renderInviteeTabs(); renderInviteeList(); }
+function renderInviteeList() {
+  const sorted = [...invitees].sort((a,b) => b[inviteeSortBy] - a[inviteeSortBy]);
+  document.getElementById('inviteeList').innerHTML = sorted.map(inv => {
+    const st = statusMap[inv.status];
+    const todayClass = inv.today > 0 ? 'today-active' : '';
+    const zeroClass = inv.today === 0 ? 'zero' : '';
+    return `
+      <div class="ct-invitee ${todayClass}" onclick="openInviteeDetail('${inv.id}')">
+        <div class="ct-avatar ${inv.avClass}">${inv.avLetter}</div>
+        <div class="ct-inv-body">
+          <div class="ct-inv-head"><div class="ct-inv-name">${inv.name}</div><span class="ct-inv-status ${st.cls}">${st.text}</span></div>
+          <div class="ct-inv-meta">${inv.meta}</div>
+        </div>
+        <div class="ct-inv-values">
+          <div class="ct-inv-today ${zeroClass}">+${inv.today}</div>
+          <div class="ct-inv-total">累計 <b>${inv.total}</b></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderIvStages() {
+  document.getElementById('ivStages').innerHTML = `
+    <div class="iv-stages-title">💰 邀請 5 階段收益（單人）</div>
+    ${inviteStages.map(s => `
+      <div class="iv-stage" onclick="openTaskDetail('${s.id}')">
+        <div class="iv-stage-icon">${s.id}</div>
+        <div class="iv-stage-info"><div class="iv-stage-name">${s.name}</div><div class="iv-stage-desc">${s.desc}</div></div>
+        <div class="iv-stage-point">+${s.pts}</div>
+      </div>
+    `).join('')}
+    <div class="iv-stage-total"><div style="font-size: 11px; color: #aaa;">單人基礎積分累計最高</div><div class="iv-stage-total-num">1,200 分</div></div>
+  `;
+}
+
+// 受邀人详情
+function openInviteeDetail(id) {
+  const inv = invitees.find(i => i.id === id);
+  if (!inv) return;
+  document.getElementById('inviteeHeaderTitle').textContent = inv.name;
+  document.getElementById('inviteeHeaderCrumb').textContent = '邀請好友 / ' + inv.name;
+  const totalPts = inv.timeline.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
+  const maxPts = inv.timeline.reduce((s,t)=>s+t.pts,0) || 1200;
+  document.getElementById('inviteeDetailBody').innerHTML = `
+    <div class="invitee-hero">
+      <div class="invitee-hero-avatar ${inv.avClass}">${inv.avLetter}</div>
+      <div class="invitee-hero-name">${inv.name}</div>
+      <div class="invitee-hero-meta">${inv.joinDays} 天前加入 · ${inv.meta}</div>
+      <div class="invitee-hero-stats">
+        <div class="ih-stat" onclick="showToast('今日從 ${inv.name} 獲得 ${inv.today} 分返佣')"><div class="ih-stat-label">今日返佣</div><div class="ih-stat-num" style="color: #4ade80;">+${inv.today}</div></div>
+        <div class="ih-stat" onclick="showToast('本週從 ${inv.name} 獲得 ${inv.weekly} 分')"><div class="ih-stat-label">本週返佣</div><div class="ih-stat-num" style="color: #60a5fa;">+${inv.weekly}</div></div>
+        <div class="ih-stat" onclick="showToast('累計從 ${inv.name} 獲得 ${inv.total} 分')"><div class="ih-stat-label">累計返佣</div><div class="ih-stat-num gold-text">+${inv.total}</div></div>
+      </div>
+    </div>
+    <div class="invitee-timeline">
+      <div class="it-title">🎯 她的邀請任務進度</div>
+      ${inv.timeline.map(t => `
+        <div class="it-row">
+          <div class="it-dot ${t.done?'done':'pending'}"></div>
+          <div class="it-body"><div class="it-stage" style="${!t.done?'color: #888;':''}">${t.stage}</div><div class="it-time">${t.time}</div></div>
+          <div class="it-pts ${!t.done?'pending':''}">+${t.pts}</div>
+        </div>
+      `).join('')}
+      <div style="margin-top: 8px; padding: 10px; background: rgba(212,175,55,0.1); border-radius: 8px; font-size: 11px; color: #F8DC7A; text-align: center;">🏆 已解鎖 <b>${totalPts} / ${maxPts}</b> 分基礎積分（NA 獲客池）</div>
+    </div>
+    <div class="comm-history">
+      <div class="ch-title">💰 來自 ${inv.name} 的返佣流水</div>
+      ${inv.history.map(h => `
+        <div class="ch-row">
+          <div><div class="ch-task">${h.task}</div><div class="ch-time">${h.time}</div></div>
+          <div class="ch-val ${h.capped?'capped':''}">${h.val === '—' ? '—' : (h.val === 0 ? '+0' : '+' + h.val)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  openStack('invitee-detail');
+}
+
+// 返佣明细
+const commFilters = [
+  {id:'all', n:'全部'},{id:'today', n:'今日'},{id:'week', n:'本週'},{id:'month', n:'本月'},{id:'by-person', n:'按受邀人'}
+];
+function renderCommFilter() {
+  document.getElementById('commFilter').innerHTML = commFilters.map(f =>
+    `<div class="pd-filter-item ${commFilterType===f.id?'active':''}" onclick="filterCommission('${f.id}')">${f.n}</div>`
+  ).join('');
+}
+function filterCommission(f) { commFilterType = f; renderCommFilter(); renderCommContent(); }
+
+function renderCommContent() {
+  const personSummary = `
+    <div class="pd-group-title">👥 按受邀人統計</div>
+    <div class="pd-list">
+      ${invitees.map(inv => {
+        const todayLabel = commFilterType === 'today' ? (inv.today > 0 ? `今日 +${inv.today}` : '今日 0') : '';
+        const filtered = commFilterType === 'today' && inv.today === 0;
+        if (filtered) return '';
+        const value = commFilterType === 'today' ? inv.today : (commFilterType === 'week' ? inv.weekly : inv.total);
+        const note = inv.status === 'sleep' ? ' · <span style="color: #666;">沉睡</span>' : (inv.status === 'new' ? ' · <span style="color: #fb923c;">未 KYC</span>' : (inv.status === 'online' ? ' · <span style="color: #4ade80;">最活躍</span>' : ''));
+        return `
+          <div class="pd-item" onclick="openInviteeDetail('${inv.id}')">
+            <div class="pd-icon" style="background: linear-gradient(135deg, #555, #333); color: #fff; font-weight: 900;">${inv.avLetter}</div>
+            <div class="pd-body"><div class="pd-name">${inv.name}${note}</div><div class="pd-meta">今日 +${inv.today} · 本週 ${inv.weekly} · <span class="pd-pool-tag r">返佣池</span></div></div>
+            <div class="pd-value">+${value}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+  
+  const todayFlow = `
+    <div class="pd-group-title">📊 今日返佣流水</div>
+    <div class="pd-list">
+      <div class="pd-item" onclick="openInviteeDetail('wendy')"><div class="pd-icon">💰</div><div class="pd-body"><div class="pd-name">Wendy · C08 內容獲讚</div><div class="pd-meta">11:02 · 10% <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+80</div></div>
+      <div class="pd-item" onclick="openInviteeDetail('wendy')"><div class="pd-icon">💰</div><div class="pd-body"><div class="pd-name">Wendy · C14 評論 ×3</div><div class="pd-meta">11:02 · 10% <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+9</div></div>
+      <div class="pd-item" onclick="openInviteeDetail('leo')"><div class="pd-icon">💰</div><div class="pd-body"><div class="pd-name">Leo · C02 深度分析</div><div class="pd-meta">10:45 · 10% <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+20</div></div>
+      <div class="pd-item" onclick="openInviteeDetail('wendy')"><div class="pd-icon">⚠️</div><div class="pd-body"><div class="pd-name">Wendy · 超單日上限 150</div><div class="pd-meta">10:30 · <span class="pd-cap">僅入歷史</span></div></div><div class="pd-value capped">+30</div></div>
+      <div class="pd-item" onclick="openInviteeDetail('fiona')"><div class="pd-icon">💰</div><div class="pd-body"><div class="pd-name">Fiona · D01 每日簽到</div><div class="pd-meta">10:15 · 10% <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+2</div></div>
+    </div>`;
+  
+  const weekFlow = `
+    <div class="pd-group-title">📊 本週返佣聚合（按日）</div>
+    <div class="pd-list">
+      <div class="pd-item"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">週一 05/05</div><div class="pd-meta">5 位活躍受邀人 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+85</div></div>
+      <div class="pd-item"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">週二 05/06</div><div class="pd-meta">3 位活躍 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+45</div></div>
+      <div class="pd-item"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">週三 05/07</div><div class="pd-meta">4 位活躍 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+70</div></div>
+      <div class="pd-item"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">週四 05/08</div><div class="pd-meta">3 位活躍 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+30</div></div>
+      <div class="pd-item"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">週五 05/09</div><div class="pd-meta">2 位活躍 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+30</div></div>
+      <div class="pd-item" style="background: rgba(74,222,128,0.05);"><div class="pd-icon">📅</div><div class="pd-body"><div class="pd-name">今天 05/11 <small style="color:#4ade80;">·當日</small></div><div class="pd-meta">3 位活躍 <span class="pd-pool-tag r">返佣池</span></div></div><div class="pd-value">+80</div></div>
+    </div>`;
+  
+  let html = '';
+  if (commFilterType === 'by-person' || commFilterType === 'all') html += personSummary;
+  if (commFilterType === 'today' || commFilterType === 'all') html += todayFlow;
+  if (commFilterType === 'week' || commFilterType === 'month') html += weekFlow;
+  document.getElementById('commContent').innerHTML = html;
+}
+
+// 任务中心
+let tcCurrentTab = 'daily';
+function renderTcTabs() {
+  document.getElementById('tcTabs').innerHTML = tcTabsData.map(t =>
+    `<div class="tc-tab ${tcCurrentTab===t.id?'active':''}" onclick="setTcTab('${t.id}')">${t.name}</div>`
+  ).join('');
+}
+function setTcTab(id) { tcCurrentTab = id; renderTcTabs(); renderTcContent(); }
+
+function renderTaskCard(t) {
+  let progress = '';
+  if (t.cur !== undefined) {
+    const pct = (t.cur / t.max) * 100;
+    progress = `<div class="tc-task-progress"><div class="tc-task-bar"><div class="tc-task-bar-fill" style="width: ${Math.min(pct, 100)}%;"></div></div><div class="tc-task-ratio">${t.cur}/${t.max}${t.unit?' '+t.unit:''}</div></div>`;
+  }
+  let statusHtml = '';
+  if (t.statusTag) statusHtml = `<span class="tc-task-status ${t.statusTag}">${t.statusText}</span>`;
+  let onclick = '';
+  switch(t.action) {
+    case 'post': onclick = `openModal('postModal')`; break;
+    case 'go-home': onclick = `closeStack(); switchTab('home'); showToast('🏠 已跳轉，去完成任務吧')`; break;
+    case 'share': onclick = `openModal('postModal')`; break;
+    case 'invite': onclick = `openStack('invite')`; break;
+    case 'view': onclick = `openTaskDetail('${t.id}')`; break;
+    case 'locked': onclick = `showToast('🔒 完成 D01-D04 後自動解鎖 D05')`; break;
+    default: onclick = `openTaskDetail('${t.id}')`;
+  }
+  return `
+    <div class="tc-task" onclick="${onclick}">
+      <div class="tc-task-icon" style="background: ${t.iconBg};">${t.icon}</div>
+      <div class="tc-task-body">
+        <div class="tc-task-head"><span class="tc-task-id">${t.id}</span><span class="tc-task-name">${t.name}</span>${statusHtml}</div>
+        <div class="tc-task-desc">${t.desc}</div>
+        ${progress}
+      </div>
+      <div class="tc-task-reward">${t.reward}</div>
+    </div>`;
+}
+
+function renderTcContent() {
+  const cat = tasksByCategory[tcCurrentTab];
+  let html = `
+    <div class="tc-cat-header"><span class="tc-cat-header-icon">${cat.header.icon}</span>${cat.header.title}</div>
+    <div class="tc-pool-summary">${cat.header.summary}</div>
+  `;
+  html += cat.items.map(renderTaskCard).join('');
+  
+  if (cat.extra === 'checkin') {
+    html += `
+    <div class="checkin-milestone">
+      <div class="cm-head"><div class="cm-title">🔥 連續簽到里程碑</div><div class="cm-day">第 6 天</div></div>
+      <div class="cm-days">
+        ${[1,2,3,4,5,6].map(d => `<div class="cm-day-cell done" onclick="showToast('第 ${d} 天已簽到')">✓</div>`).join('')}
+        <div class="cm-day-cell today" onclick="showToast('明天簽到即可領 D07 +60 分徽章！')">7</div>
+      </div>
+      <div class="cm-milestones">
+        <div class="cm-ms achieved" onclick="showToast('✅ D06 連續3日已領取 +30 分')"><div class="cm-ms-done">✓</div><div class="cm-ms-icon">🎫</div><div class="cm-ms-day">D06 · 3天</div><div class="cm-ms-point">+30</div></div>
+        <div class="cm-ms" onclick="openTaskDetail('D07')"><div class="cm-ms-icon">🏅</div><div class="cm-ms-day">D07 · 7天</div><div class="cm-ms-point">+60</div></div>
+        <div class="cm-ms" onclick="openTaskDetail('D08')"><div class="cm-ms-icon">💎</div><div class="cm-ms-day">D08 · 14天</div><div class="cm-ms-point">+500</div></div>
+        <div class="cm-ms" onclick="openTaskDetail('D09')"><div class="cm-ms-icon">👑</div><div class="cm-ms-day">D09 · 30天</div><div class="cm-ms-point">+1500</div></div>
+      </div>
+    </div>`;
+  }
+  
+  if (cat.passive) {
+    html += `<div class="tc-cat-header"><span class="tc-cat-header-icon">🔥</span>內容被動獎勵（發布後持續獲得）</div>`;
+    html += cat.passive.map(renderTaskCard).join('');
+  }
+  
+  document.getElementById('tcContent').innerHTML = html;
+}
+
+// 任务详情
+function openTaskDetail(id) { loadTaskDetail(id); openStack('task-detail'); }
+function loadTaskDetail(id) {
+  const t = taskDetails[id];
+  if (!t) {
+    document.getElementById('tdTitle').textContent = '任務詳情 · ' + id;
+    document.getElementById('tdCrumb').textContent = '任務 / ' + id;
+    document.getElementById('tdContent').innerHTML = `<div style="padding: 30px; text-align: center; color: #888;">該任務詳情正在補充...<br><br><div style="font-size: 12px;">ID: ${id}</div></div>`;
+    return;
+  }
+  document.getElementById('tdTitle').textContent = '任務詳情 · ' + id;
+  document.getElementById('tdCrumb').textContent = '任務中心 / ' + id + ' ' + t.name;
+  document.getElementById('tdContent').innerHTML = `
+    <div style="padding: 16px; background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.3); border-radius: 14px; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 52px; height: 52px; background: rgba(212,175,55,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #F8DC7A; font-family: monospace;">${id}</div>
+        <div><div style="font-size: 16px; font-weight: 800;">${t.name}</div><div style="font-size: 11px; color: #F8DC7A;">${t.pool}</div></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div class="clickable" style="padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;" onclick="showToast('單次完成 ${t.perDay}')"><div style="font-size: 10px; color: #888;">單次積分</div><div style="font-size: 16px; font-weight: 900; color: #F8DC7A;">${t.perDay}</div></div>
+        <div class="clickable" style="padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;" onclick="showToast('每日上限 ${t.daily}')"><div style="font-size: 10px; color: #888;">每日上限</div><div style="font-size: 16px; font-weight: 900;">${t.daily}</div></div>
+        <div class="clickable" style="padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;" onclick="showToast('最高/日 ${t.maxDay} 分')"><div style="font-size: 10px; color: #888;">最高/日</div><div style="font-size: 16px; font-weight: 900; color: #4ade80;">${t.maxDay}</div></div>
+      </div>
+    </div>
+    <div style="padding: 14px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; margin-bottom: 14px;">
+      <div style="font-size: 13px; font-weight: 700; margin-bottom: 10px;">📋 任務要求</div>
+      <div style="font-size: 12px; color: #ccc; line-height: 2;">${t.rules.map(r => '✓ ' + r).join('<br>')}</div>
+    </div>
+    ${t.related ? `<div style="padding: 14px; background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(20,20,20,1)); border: 1px solid rgba(212,175,55,0.25); border-radius: 14px; margin-bottom: 14px;"><div style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">💡 關聯獎勵</div><div style="font-size: 11px; color: #aaa;">${t.related}</div></div>` : ''}
+    <div class="clickable" style="padding: 14px; background: linear-gradient(135deg, #F8DC7A, #D4AF37); color: #000; border-radius: 14px; text-align: center; font-size: 15px; font-weight: 800;" onclick="goDoTask('${id}')">🚀 立即去做</div>
+  `;
+}
+
+function goDoTask(id) {
+  if (id.startsWith('NA')) { closeStack(); openStack('invite'); showToast('👥 已跳轉到邀請頁'); }
+  else if (id.startsWith('C') && !['C14','C16','C18'].includes(id)) { closeStack(); openModal('postModal'); }
+  else { closeStack(); closeStack(); switchTab('home'); showToast('🏠 已跳轉到社區'); }
+}
+
+// 排行榜
+function renderLbTabs() {
+  document.getElementById('lbTabs').innerHTML = `
+    <div class="lb-tab ${lbType==='week'?'active':''}" onclick="setLbType('week')">週榜</div>
+    <div class="lb-tab ${lbType==='month'?'active':''}" onclick="setLbType('month')">月榜</div>
+  `;
+}
+function setLbType(t) { lbType = t; renderLbTabs(); renderLbCountdown(); renderLbContent(); }
+function renderLbCountdown() {
+  document.querySelector('#lbCountdown .lb-countdown-time').textContent = lbData[lbType].countdown;
+}
+function trendBadge(trend) {
+  if (trend === 'same') return '<div class="lb-row-trend same">—</div>';
+  const [dir, num] = trend.split(':');
+  return `<div class="lb-row-trend ${dir}">${dir==='up'?'↑':'↓'}${num}</div>`;
+}
+function renderLbContent() {
+  const d = lbData[lbType];
+  const labels = lbType === 'week' ? bandLabels : bandMonthLabels;
+  const meTrend = d.myTrend.replace(/(up|down)(\d+)/, '$1:$2');
+  const meAvBg = lbType==='week' ? '#D4AF37' : '#A78BFA';
+  
+  let html = `
+    <div class="lb-podium">
+      <div class="lb-top" onclick="showToast('${d.top3[0].name} · ${d.top3[0].score} 分 · ${d.top3[0].prize}')"><div class="lb-top-avatar g2">${d.top3[0].avatar}</div><div class="lb-top-name">${d.top3[0].name}</div><div class="lb-top-score">${d.top3[0].score.toLocaleString()}</div><div class="lb-top-rank">2nd · ${d.top3[0].prize}</div></div>
+      <div class="lb-top" onclick="showToast('🥇 ${d.top3[1].name} · ${d.top3[1].prize}')"><div class="lb-top-crown">👑</div><div class="lb-top-avatar g1">${d.top3[1].avatar}</div><div class="lb-top-name">${d.top3[1].name}</div><div class="lb-top-score">${d.top3[1].score.toLocaleString()}</div><div class="lb-top-rank">1st · ${d.top3[1].prize}</div></div>
+      <div class="lb-top" onclick="showToast('${d.top3[2].name} · ${d.top3[2].score} 分')"><div class="lb-top-avatar g3">${d.top3[2].avatar}</div><div class="lb-top-name">${d.top3[2].name}</div><div class="lb-top-score">${d.top3[2].score.toLocaleString()}</div><div class="lb-top-rank">3rd · ${d.top3[2].prize}</div></div>
+    </div>
+    <div class="my-rank-card">
+      <div class="my-rank-num gold-text">#${d.myRank}</div>
+      <div style="flex: 1;"><div class="my-rank-title">我（Chris Wong）</div><div class="my-rank-sub">${d.myScore.toLocaleString()} 分 · 預計獎金 ${d.myPrize} · ${d.toNext}</div></div>
+      <div class="my-rank-go" onclick="closeStack(); openStack('task-center')">衝榜</div>
+    </div>
+    <div class="lb-sec-title"><span>Top 100 完整榜單</span><span>獎金檔位</span></div>
+    <div class="lb-list">
+  `;
+  
+  d.list.forEach(row => {
+    if (typeof row === 'string') {
+      if (row === 'me') {
+        html += `
+          <div class="lb-row me">
+            <div class="lb-row-rank me-rank">${d.myRank}</div>
+            <div class="lb-row-avatar" style="background: linear-gradient(135deg, ${meAvBg}, #8B6914);">我</div>
+            <div class="lb-row-body"><div class="lb-row-name gold-text" style="font-weight: 800;">Chris Wong (我)</div><div class="lb-row-score">${d.myScore.toLocaleString()} 分</div></div>
+            ${trendBadge(meTrend)}
+            <div class="lb-row-prize">${d.myPrize}</div>
+          </div>`;
+      } else if (row.startsWith('split:')) {
+        const band = row.split(':')[1];
+        html += `<div class="lb-prize-band">${labels[band]}</div>`;
+      } else if (row === 'no-prize') {
+        html += `<div class="lb-prize-band">${labels['no-prize']}</div>`;
+      }
+    } else {
+      html += `
+        <div class="lb-row" onclick="showToast('${row.name} · ${row.score} 分 · ${row.prize}')">
+          <div class="lb-row-rank">${row.rank}</div>
+          <div class="lb-row-avatar">${row.name.slice(0,1)}</div>
+          <div class="lb-row-body"><div class="lb-row-name">${row.name}</div><div class="lb-row-score">${row.score.toLocaleString()} 分</div></div>
+          ${trendBadge(row.trend)}
+          <div class="lb-row-prize" style="${row.band==='none'?'color: #555;':''}">${row.prize}</div>
+        </div>`;
+    }
+  });
+  
+  html += `</div>
+    <div style="margin: 14px 16px; padding: 12px; background: rgba(96,165,250,0.06); border-radius: 10px; font-size: 11px; color: #93c5fd; line-height: 1.6;">
+      📌 ${lbType==='week'?'週榜':'月榜'}結算後 24 小時內公佈名單，獲獎者可在「收件箱」確認偏好品類
+    </div>
+    <div class="clickable" style="text-align: center; padding: 14px; font-size: 12px; color: #F8DC7A;" onclick="openStack('win-history')">查看歷屆獲獎記錄 ›</div>
+  `;
+  document.getElementById('lbContent').innerHTML = html;
+}
+
+// 奖品分类
+let rwSelectedCat = '';
+const rwCatsData = [
+  {id:'apple', icon:'🍎', n:'Apple', d:'Gift Card'},
+  {id:'jd', icon:'🛒', n:'京東卡', d:'E-Card'},
+  {id:'tmall', icon:'🏪', n:'天貓超市', d:'E-Card'},
+  {id:'wellcome', icon:'🥬', n:'惠康', d:'Wellcome'},
+  {id:'starbucks', icon:'☕', n:'Starbucks', d:'E-Card'},
+  {id:'more', icon:'➕', n:'更多', d:'陸續上線'}
+];
+function renderRwCats() {
+  document.getElementById('rwCats').innerHTML = rwCatsData.map(c =>
+    `<div class="rw-cat ${rwSelectedCat===c.id?'selected':''}" onclick="setRwCat('${c.id}','${c.n}')"><div class="rw-cat-icon">${c.icon}</div><div class="rw-cat-name">${c.n}</div><div class="rw-cat-desc">${c.d}</div></div>`
+  ).join('');
+}
+function setRwCat(id, n) {
+  rwSelectedCat = id;
+  renderRwCats();
+  showToast('✅ 偏好品類已設為「' + n + '」· 中獎後優先派發');
+}
+function filterToRank(rank) { showToast('🎯 你的位置：第 ' + (rank<10 ? '4-10' : (rank<50 ? '11-50' : '51-100')) + ' 名段位'); }
+
+// 积分明细
+const pdFilters = [
+  {id:'all', n:'全部'},{id:'c', n:'🎨 內容池'},{id:'d', n:'👥 社交池'},{id:'n', n:'📢 獲客池'},{id:'r', n:'💰 返佣池'}
+];
+function renderPdFilter() {
+  document.getElementById('pdFilter').innerHTML = pdFilters.map(f =>
+    `<div class="pd-filter-item ${pdFilterType===f.id?'active':''}" onclick="setPdFilter('${f.id}')">${f.n}</div>`
+  ).join('');
+}
+function setPdFilter(id) { pdFilterType = id; renderPdFilter(); renderPdContent(); }
+function filterPdSearch(v) { pdSearchTerm = v.toLowerCase(); renderPdContent(); }
+
+function renderPdContent() {
+  let totalCount = 0;
+  let html = '';
+  for (const group of pdData) {
+    const items = group.items.filter(it => {
+      if (pdFilterType !== 'all' && it.pool !== pdFilterType) return false;
+      if (pdSearchTerm && !it.name.toLowerCase().includes(pdSearchTerm)) return false;
+      return true;
+    });
+    if (items.length === 0) continue;
+    totalCount += items.length;
+    html += `<div class="pd-group-title">${group.date}</div><div class="pd-list">`;
+    html += items.map(it => `
+      <div class="pd-item" onclick="showToast('${it.name} · +${it.val} 分')">
+        <div class="pd-icon">${it.icon}</div>
+        <div class="pd-body"><div class="pd-name">${it.name}</div><div class="pd-meta">${it.time} <span class="pd-pool-tag ${it.pool}">${it.poolName}</span>${it.extra?` · ${it.extra}`:''}${it.capped?` <span class="pd-cap">僅入歷史</span>`:''}</div></div>
+        <div class="pd-value ${it.capped?'capped':''}">+${it.val}</div>
+      </div>
+    `).join('');
+    html += '</div>';
+  }
+  if (totalCount === 0) html = `<div class="pd-empty">😔 沒有符合條件的明細</div>`;
+  document.getElementById('pdContent').innerHTML = html;
+}
+
+// 商城
+function renderMallFilter() {
+  document.getElementById('mallFilter').innerHTML = mallFilters.map(f =>
+    `<div class="cat ${mallFilterType===f.id?'active':''}" onclick="setMallFilter('${f.id}')">${f.name}</div>`
+  ).join('');
+}
+function setMallFilter(id) { mallFilterType = id; renderMallFilter(); renderMallContent(); }
+function renderMallContent() {
+  let items = mallItems;
+  if (mallFilterType !== 'all') items = mallItems.filter(i => i.cat === mallFilterType);
+  if (items.length === 0) { document.getElementById('mallContent').innerHTML = `<div class="pd-empty">😔 暫無商品</div>`; return; }
+  document.getElementById('mallContent').innerHTML = `
+    <div style="margin: 0 16px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;">
+      ${items.map(it => `
+        <div style="padding: 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer;" onclick="redeemMall('${it.name}', ${it.cost})">
+          <div style="font-size: 32px;">${it.icon}</div>
+          <div style="flex: 1;">
+            <div style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px;">${it.name}${it.hot?' <span style="font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(239,68,68,0.2); color: #f87171; font-weight: 700;">🔥熱</span>':''}</div>
+            <div style="font-size: 10px; color: #888; margin-top: 2px;">${it.stock||''}</div>
+          </div>
+          <div style="text-align: right;"><div style="color: #F8DC7A; font-weight: 700; font-size: 14px;">${it.cost.toLocaleString()}</div><div style="font-size: 9px; color: #666; margin-top: 1px;">積分</div></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+let mallBalance = 24860;
+function redeemMall(name, cost) {
+  if (mallBalance < cost) { showToast('❌ 積分不足，還差 ' + (cost - mallBalance) + ' 分'); return; }
+  mallBalance -= cost;
+  document.getElementById('mallBalance').textContent = mallBalance.toLocaleString();
+  showToast('✅ 已兌換 ' + name + ' · 卡密發至郵箱');
+}
+
+// 历届
+function renderWhFilter() {
+  document.getElementById('whFilter').innerHTML = whFilters.map(f =>
+    `<div class="cat ${whFilter===f.id?'active':''}" onclick="setWhFilter('${f.id}')">${f.n}</div>`
+  ).join('');
+}
+function setWhFilter(id) { whFilter = id; renderWhFilter(); renderWhContent(); }
+function renderWhContent() {
+  const d = whData[whFilter];
+  document.getElementById('whContent').innerHTML = `
+    <div style="margin: 0 16px 12px; padding: 12px; background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.2); border-radius: 10px; text-align: center; font-size: 12px;">
+      <div style="font-weight: 800; color: #F8DC7A; margin-bottom: 3px;">${d.title}</div>
+      <div style="font-size: 11px; color: #aaa;">${d.total}</div>
+    </div>
+    <div style="margin: 0 16px; background: #141414; border: 1px solid rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;">
+      ${d.winners.map(w => {
+        const rankCls = w.rank===1?'top1':(w.rank===2?'top2':(w.rank===3?'top3':''));
+        return `
+          <div class="winner-row" style="${w.me?'background: rgba(212,175,55,0.08);':''}" onclick="showToast('${w.name} · ${w.score} ${typeof w.score === 'number' ? '分':''} · ${w.prize}')">
+            <div class="winner-rank ${rankCls}">${w.rank}</div>
+            <div class="winner-name">${w.name}${w.me?' <span style="font-size: 10px; color: #F8DC7A;">(我)</span>':''}</div>
+            <div class="winner-prize">${w.prize}</div>
+          </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// 收件箱
+function renderInbox() {
+  document.getElementById('inboxList').innerHTML = inboxData.map(m => `
+    <div class="inbox-item ${m.unread?'unread':''}" onclick="handleInbox(${m.id})">
+      <div class="inbox-icon ${m.type}">${m.type==='award'?'🎉':(m.type==='point'?'💎':'⚠️')}</div>
+      <div class="inbox-body">
+        <div class="inbox-title">${m.title}${m.unread?'<span class="inbox-dot"></span>':''}</div>
+        <div class="inbox-desc">${m.desc}</div>
+        <div class="inbox-time">${m.time}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function handleInbox(id) {
+  const m = inboxData.find(i => i.id === id);
+  if (!m) return;
+  m.unread = false;
+  renderInbox();
+  if (m.action === 'claim') openModal('claimPrizeModal');
+  else if (m.action === 'task') { closeStack(); openStack('points-center'); }
+  else if (m.action.startsWith('invitee:')) { openInviteeDetail(m.action.split(':')[1]); }
+}
+function markAllRead() { inboxData.forEach(m => m.unread = false); renderInbox(); showToast('✅ 全部標記為已讀'); }
+
+// 帮助
+function renderHelp() {
+  document.getElementById('helpList').innerHTML = helpData.map((h,i) => `
+    <div class="help-item ${i===0?'open':''}" onclick="toggleHelp(this)">
+      <div class="help-q">${h.q}<span class="help-q-arrow">›</span></div>
+      <div class="help-a">${h.a}</div>
+    </div>
+  `).join('');
+}
+function toggleHelp(el) {
+  const open = el.classList.contains('open');
+  document.querySelectorAll('.help-item').forEach(h => h.classList.remove('open'));
+  if (!open) el.classList.add('open');
+}
+
+// 徽章
+function renderBadges() {
+  document.getElementById('badgesGrid').innerHTML = badges.map(b => `
+    <div style="text-align: center; padding: 10px; background: ${b.got?'rgba(212,175,55,0.1)':'rgba(255,255,255,0.04)'}; border-radius: 10px; cursor: pointer; ${!b.got?'opacity: 0.4;':''}" onclick="showToast('${b.got?'✅ ':' 🔒 '}${b.n}徽章${b.got?' · 已獲得':' · 未解鎖'}')">
+      <div style="font-size: 28px; ${!b.got?'filter: grayscale(1);':''}">${b.i}</div>
+      <div style="font-size: 10px; color: ${b.got?'#F8DC7A':'#666'}; margin-top: 4px;">${b.n}</div>
+    </div>
+  `).join('');
+}
+
+// 搜索
+function renderSearchResults(v) {
+  if (!v) { document.getElementById('searchResults').innerHTML = `
+    <div style="font-size: 11px; color: #888; margin-bottom: 8px;">🔥 熱搜</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;">
+      ${['邀請好友','連續簽到','C14 評論','返佣規則','港股','AI'].map(t=>`<div class="cat clickable" onclick="renderSearchResults('${t}'); document.getElementById('searchInput').value='${t}';">${t}</div>`).join('')}
+    </div>`; return; }
+  v = v.toLowerCase();
+  const all = [
+    {type:'任務', name:'D01 每日簽到', desc:'社交池 +20', action:`closeModal(); openTaskDetail('D01')`},
+    {type:'任務', name:'C14 高質量評論', desc:'內容池 +30', action:`closeModal(); openTaskDetail('C14')`},
+    {type:'任務', name:'NA01 邀請註冊', desc:'獲客池 +200', action:`closeModal(); openStack('invite')`},
+    {type:'頁面', name:'積分中心', desc:'三類積分總覽', action:`closeModal(); openStack('points-center')`},
+    {type:'頁面', name:'排行榜', desc:'週榜 + 月榜', action:`closeModal(); openStack('leaderboard')`},
+    {type:'頁面', name:'返佣明細', desc:'按受邀人追蹤', action:`closeModal(); openStack('commission-detail')`},
+    {type:'內容', name:'港股老兵 主頁', desc:'週榜第 5 名', action:`closeModal(); showToast('查看 港股老兵 的主頁')`}
+  ];
+  const matched = all.filter(a => a.name.toLowerCase().includes(v) || a.desc.toLowerCase().includes(v) || a.type.includes(v));
+  if (matched.length === 0) { document.getElementById('searchResults').innerHTML = `<div style="padding: 30px; text-align: center; color: #666; font-size: 12px;">沒有找到「${v}」</div>`; return; }
+  document.getElementById('searchResults').innerHTML = matched.map(m => `
+    <div class="modal-list-item" onclick="${m.action}">
+      <div style="width: 30px; height: 30px; background: rgba(212,175,55,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #F8DC7A;">${m.type[0]}</div>
+      <div style="flex: 1;"><div style="font-weight: 700; font-size: 13px;">${m.name}</div><div style="font-size: 10px; color: #888;">${m.type} · ${m.desc}</div></div>
+      <div style="color: #555;">›</div>
+    </div>
+  `).join('');
+}
+
+/* ========== 通用功能 ========== */
+const tabMap = { home: 'tabHome', market: 'tabMarket', watchlist: 'tabWatchlist', trade: 'tabTrade' };
+const stackHistory = [];
+
+function switchTab(tab) {
+  while (stackHistory.length > 0) closeStack();
+  Object.values(tabMap).forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(tabMap[tab]).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+  document.querySelector('.page.tab-page.active').scrollTop = 0;
+}
+
+function openStack(pageId) {
+  const page = document.getElementById('page-' + pageId);
+  if (!page) return;
+  if (stackHistory.length > 0) document.getElementById('page-' + stackHistory[stackHistory.length - 1]).classList.add('behind');
+  stackHistory.push(pageId);
+  page.classList.add('show');
+  page.scrollTop = 0;
+}
+function closeStack() {
+  if (stackHistory.length === 0) return;
+  const pageId = stackHistory.pop();
+  const page = document.getElementById('page-' + pageId);
+  page.classList.remove('show', 'behind');
+  if (stackHistory.length > 0) document.getElementById('page-' + stackHistory[stackHistory.length - 1]).classList.remove('behind');
+}
+
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
+function closeModalBg(e) { if (e.target.classList.contains('modal-overlay')) closeModal(); }
+
+function showToast(text) {
+  const toast = document.getElementById('toast');
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function claimTask(el, pts) {
+  showToast('✨ 獲得 +' + pts + ' 積分 · 已計入社交池');
+  el.textContent = '已領取';
+  el.className = 'task-action done';
+}
+
+function copyLink() { showToast('✅ 邀請連結已複製到剪貼板'); }
+function shareSocial(p) { closeModal(); showToast('✅ 已分享至 ' + p + ' · C16 +30 分待風控'); }
+
+function claimPrize(name) { closeModal(); showToast('✅ 已選擇 ' + name + ' · 客服 3 個工作日內聯繫'); }
+
+function saveProfile() {
+  const name = document.getElementById('nameInput').value;
+  closeModal();
+  showToast('✅ 資料已更新：' + name);
+}
+
+function toggleSetting(type) {
+  if (type === '通知') { settings.notice = !settings.notice; document.getElementById('setNotice').textContent = settings.notice?'已開啟':'已關閉'; document.getElementById('setNotice').style.color = settings.notice?'#4ade80':'#666'; }
+  if (type === '隱私') { settings.privacy = !settings.privacy; document.getElementById('setPrivacy').textContent = settings.privacy?'已開啟':'已關閉'; document.getElementById('setPrivacy').style.color = settings.privacy?'#4ade80':'#666'; }
+  showToast('✅ ' + type + ' 設置已切換');
+}
+function cycleSetting(type) {
+  if (type === '語言') { settings.langIdx = (settings.langIdx + 1) % settings.lang.length; document.getElementById('setLang').textContent = settings.lang[settings.langIdx] + ' ›'; }
+  if (type === '貨幣') { settings.currencyIdx = (settings.currencyIdx + 1) % settings.currency.length; document.getElementById('setCurrency').textContent = settings.currency[settings.currencyIdx] + ' ›'; }
+  showToast('✅ ' + type + '已切換');
+}
+
+function aiSuggest(type) {
+  const responses = {
+    '衝榜': '🎯 衝榜攻略：<br>① 完成 D04 刷視頻 7 分鐘（+50）<br>② 寫 3 條高質量評論 C14（+90）<br>③ 互關 2 位用戶 C18（+60）<br>合計可獲 200 分，預計排名升至 #44',
+    '市場': '📊 今日要點：<br>• 港股科技板塊強勢，騰訊+2.34%<br>• 美聯儲鴿派表態提振情緒<br>• 比特幣站上 72K，鯨魚動向值得關注',
+    '邀請': '👥 提升邀請收益：<br>• Jason 還未完成 KYC，可促他完成（+300）<br>• Mia 已沉睡，可發站內信喚醒<br>• 申請 KOL 認證可解鎖週 50 人上限'
+  };
+  document.getElementById('aiResponse').innerHTML = responses[type];
+}
+
+// 倒计时
+let cd = { d: 2, h: 14, m: 28, s: 53 };
+setInterval(() => {
+  cd.s--;
+  if (cd.s < 0) { cd.s = 59; cd.m--; }
+  if (cd.m < 0) { cd.m = 59; cd.h--; }
+  if (cd.h < 0) { cd.h = 23; cd.d--; }
+  const cdEl = document.getElementById('countdown');
+  if (cdEl) {
+    cdEl.children[0].textContent = String(cd.d).padStart(2, '0');
+    cdEl.children[1].textContent = String(cd.h).padStart(2, '0');
+    cdEl.children[2].textContent = String(cd.m).padStart(2, '0');
+    cdEl.children[3].textContent = String(cd.s).padStart(2, '0');
+  }
+}, 1000);
+
+/* ========== 初始化 ========== */
+renderHomeTabs();
+renderCats();
+renderFeed();
+renderMarketTabs();
+renderMarket();
+renderWatchlist();
+renderTrade();
+renderAccSwitcher();
+renderPoolSwitcher();
+renderPools();
+renderWeekRotate();
+renderRecommendTasks();
+renderWinnersTop3();
+renderInviteeTabs();
+renderInviteeList();
+renderIvStages();
+renderCommFilter();
+renderCommContent();
+renderTcTabs();
+renderTcContent();
+renderLbTabs();
+renderLbContent();
+renderRwCats();
+renderPdFilter();
+renderPdContent();
+renderMallFilter();
+renderMallContent();
+renderWhFilter();
+renderWhContent();
+renderInbox();
+renderHelp();
+renderBadges();
+renderSearchResults('');
+</script>
+
+
+
+</body></html>
